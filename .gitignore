@@ -1,0 +1,19 @@
+# deps
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# env / secrets
+.env
+.env.local
+CLAUDE.local.md
+
+# build
+dist/
+frontend/dist/
+
+# editor / os
+.DS_Store
+.vscode/
+.idea/

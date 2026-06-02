@@ -1,0 +1,16 @@
+[
+  {
+    "slug": "url-shortener",
+    "title": "Design a URL Shortener",
+    "description": "Build a service that turns long URLs into short codes and redirects on lookup. Handle read-heavy traffic.",
+    "requirements": [
+      "Accept a long URL and return a short code",
+      "Redirect short code to original URL",
+      "Handle high read volume (reads >> writes)",
+      "Avoid single points of failure on the read path"
+    ],
+    "reference_graph": { "nodes": [], "edges": [] },
+    "difficulty": "beginner",
+    "tags": ["caching", "read-heavy", "key-value"]
+  }
+]
