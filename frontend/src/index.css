@@ -1,3 +1,62 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #09090E;
+    color: #EDEDF2;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  :focus-visible {
+    outline: 2px solid #6366F1;
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  .dot-grid {
+    background-image: radial-gradient(circle, rgba(99, 102, 241, 0.14) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* CTA buttons only — never on text */
+  .btn-primary {
+    background: linear-gradient(135deg, #6366F1, #818CF8);
+  }
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+}
+
+@keyframes flow-edge {
+  from { stroke-dashoffset: 18; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* Two min-w-full children approach — each child scrolls to -(100% + gap) */
+@keyframes marquee-smooth {
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(-100% - var(--gap))); }
+}
+
+/* Subtle breathing animation for component cards */
+@keyframes card-breathe {
+  0%, 100% { opacity: 0.75; }
+  50%       { opacity: 1;    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-marquee-smooth,
+  .animate-fade-up,
+  [class*="card-breathe"] {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  * {
+    transition-duration: 1ms !important;
+  }
+}
