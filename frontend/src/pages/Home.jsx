@@ -268,30 +268,41 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* ── Company carousel — n8n-style blue glow, white-silhouette logos ── */}
-      <section className="relative py-10 overflow-hidden" style={{ background: "#0C0C1A" }}>
-        {/* Indigo radial glow — the n8n effect */}
+      {/* ── Company carousel — horizontal gradient, lighter centre ── */}
+      <section className="relative py-12 overflow-hidden">
+        {/* Horizontal gradient: edges match bg-base, centre glows lighter */}
         <div
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: "radial-gradient(ellipse 70% 120% at 50% 50%, rgba(99,102,241,0.1) 0%, transparent 70%)",
+            background: [
+              "linear-gradient(to right, #09090E 0%, #0B0B1C 12%, #0F0F2A 50%, #0B0B1C 88%, #09090E 100%)",
+              "radial-gradient(ellipse 55% 100% at 50% 50%, rgba(99,102,241,0.16) 0%, transparent 65%)",
+            ].join(", "),
           }}
         />
-        <p className="relative text-xs text-muted/50 text-center mb-6 select-none">Case studies from</p>
+        {/* Top + bottom vignettes so the strip doesn't bleed into adjacent sections */}
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-10 pointer-events-none"
+          style={{ background: "linear-gradient(to bottom, #09090E, transparent)" }} />
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-10 pointer-events-none"
+          style={{ background: "linear-gradient(to top, #09090E, transparent)" }} />
+
+        <p className="relative text-sm font-medium text-muted/55 text-center mb-8 select-none tracking-wide">
+          Case studies from
+        </p>
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none"
-            style={{ background: "linear-gradient(to right, #0C0C1A, transparent)" }} />
-          <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none"
-            style={{ background: "linear-gradient(to left, #0C0C1A, transparent)" }} />
+          <div className="absolute inset-y-0 left-0 w-32 z-10 pointer-events-none"
+            style={{ background: "linear-gradient(to right, #09090E, transparent)" }} />
+          <div className="absolute inset-y-0 right-0 w-32 z-10 pointer-events-none"
+            style={{ background: "linear-gradient(to left, #09090E, transparent)" }} />
           <div className="flex animate-marquee gap-16 w-max px-12 items-center">
             {[...CAROUSEL, ...CAROUSEL].map((co, i) => (
               <img
                 key={i}
                 src={co.src}
                 alt={co.name}
-                height="22"
-                className="h-[22px] w-auto object-contain brightness-0 invert opacity-55 hover:opacity-90 transition-opacity duration-300"
+                height="26"
+                className="h-[26px] w-auto object-contain brightness-0 invert opacity-50 hover:opacity-85 transition-opacity duration-300"
               />
             ))}
           </div>
@@ -479,57 +490,60 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Stats row — About3 achievements style with indigo mesh overlay */}
-          <div className="mt-4 relative overflow-hidden rounded-xl bg-base border border-white/[0.07] p-8 md:p-10">
-            <div className="flex flex-wrap justify-around gap-8 text-center relative z-10">
-              {[
-                { label: "Components",   value: "14"   },
-                { label: "Case Studies", value: "6"    },
-                { label: "Challenges",   value: "4"    },
-                { label: "Cost",         value: "Free" },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex flex-col gap-2">
-                  <p className="text-muted text-xs">{label}</p>
-                  <span className="font-display font-semibold text-3xl md:text-4xl text-ink">{value}</span>
-                </div>
-              ))}
-            </div>
-            {/* Mesh grid overlay — from About3's achievement section */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 hidden md:block"
-              style={{
-                backgroundImage:
-                  "linear-gradient(to right, rgba(99,102,241,0.4) 1px, transparent 1px)," +
-                  "linear-gradient(to bottom, rgba(99,102,241,0.4) 1px, transparent 1px)",
-                backgroundSize: "60px 60px",
-                opacity: 0.07,
-                maskImage:
-                  "linear-gradient(to bottom right, #000 0%, transparent 65%)",
-                WebkitMaskImage:
-                  "linear-gradient(to bottom right, #000 0%, transparent 65%)",
-              }}
-            />
-          </div>
-
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
-      <section className="bg-base border-t border-white/[0.05] py-20 px-6">
-        <div className="max-w-md mx-auto text-center">
+      {/* ── Final CTA — energetic pre-footer ── */}
+      <section className="relative overflow-hidden bg-base pt-28 pb-20 px-6">
+        {/* Dotted particle field */}
+        <DottedSurface />
+
+        {/* Indigo energy burst — concentrated behind the headline */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: [
+              "radial-gradient(ellipse 65% 75% at 50% 52%, rgba(99,102,241,0.24) 0%, rgba(139,92,246,0.12) 40%, transparent 70%)",
+              "radial-gradient(ellipse 35% 45% at 50% 48%, rgba(99,102,241,0.10) 0%, transparent 55%)",
+            ].join(", "),
+          }}
+        />
+
+        {/* Soft top fade from previous section */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-24"
+          style={{ background: "linear-gradient(to bottom, #09090E, transparent)" }}
+        />
+
+        <div className="relative z-10 max-w-2xl mx-auto text-center">
+          <p className="font-mono text-xs text-indigo-400/80 tracking-[0.16em] uppercase mb-6">
+            Get started
+          </p>
           <h2
-            className="font-display font-semibold text-[1.75rem] text-ink mb-3"
+            className="font-display font-semibold text-[2.25rem] sm:text-[3rem] text-ink leading-[1.08] tracking-[-0.025em] mb-5"
             style={{ textWrap: "balance" }}
           >
-            Ready to think in systems?
+            Ready to think<br />in systems?
           </h2>
-          <p className="text-muted text-sm leading-relaxed mb-8">
-            Start with the sandbox to explore freely, or jump into a structured challenge.
+          <p className="text-muted text-[1rem] leading-relaxed mb-10 max-w-[42ch] mx-auto">
+            Start with the sandbox to explore freely, or pick up a structured challenge and get scored.
           </p>
-          <Link to="/sandbox" className="inline-flex items-center gap-2 btn-primary text-white text-sm font-semibold px-7 py-3 rounded-lg">
-            Open Sandbox <ArrowRight size={14} />
-          </Link>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <Link
+              to="/sandbox"
+              className="inline-flex items-center gap-2 btn-primary text-white text-sm font-semibold px-8 py-3.5 rounded-xl shadow-lg shadow-indigo-500/25"
+            >
+              Open Sandbox <ArrowRight size={14} />
+            </Link>
+            <Link
+              to="/challenges"
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted/80 hover:text-ink px-6 py-3.5 rounded-xl border border-white/[0.08] hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-colors duration-150"
+            >
+              Browse challenges
+            </Link>
+          </div>
         </div>
       </section>
 

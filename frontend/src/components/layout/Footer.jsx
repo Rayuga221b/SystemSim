@@ -56,7 +56,7 @@ const SOCIAL = [
 
 export default function Footer() {
   return (
-    <footer className="relative mt-16 w-full overflow-hidden pt-16 pb-8 px-4 sm:px-6 lg:px-8">
+    <footer className="relative w-full overflow-hidden pt-8 pb-8 px-4 sm:px-6 lg:px-8">
 
       {/* Ambient glow blobs — sit behind the glass container */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 select-none overflow-hidden">
