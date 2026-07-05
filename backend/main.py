@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routes import simulate, challenges, designs, casestudies, ai, admin
+from routes import simulate, challenges, designs, casestudies, ai, admin, auth
 
 load_dotenv()
 
@@ -24,6 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(simulate.router)
 app.include_router(challenges.router)
 app.include_router(designs.router)

@@ -21,6 +21,8 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const container = containerRef.current;
+
     const SEPARATION = 150;
     const AMOUNTX = 40;
     const AMOUNTY = 60;
@@ -30,9 +32,17 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     const scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0x09090e, 2000, 10000);
 
+    // Use container dimensions, not window.innerWidth/innerHeight.
+    // The canvas must not exceed the section boundary: on large monitors the
+    // hero section is only ~560px tall while window.innerHeight can be 1400px+.
+    // overflow-hidden on the section clips the canvas from the bottom, hiding
+    // the particle grid entirely since particles render in the mid-lower portion.
+    const initW = container.clientWidth || window.innerWidth;
+    const initH = container.clientHeight || window.innerHeight;
+
     const camera = new THREE.PerspectiveCamera(
       60,
-      window.innerWidth / window.innerHeight,
+      initW / initH,
       1,
       10000,
     );
@@ -43,10 +53,10 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
       antialias: true,
     });
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(initW, initH);
     renderer.setClearColor(scene.fog.color, 0);
 
-    containerRef.current.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
     // Particle geometry
     const geometry = new THREE.BufferGeometry();
@@ -107,13 +117,20 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
       count += 0.1;
     };
 
+    // ResizeObserver tracks the container (section) size changes instead of
+    // window resize — handles layout shifts that don't change window dimensions.
     const handleResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const cw = container.clientWidth;
+      const ch = container.clientHeight;
+      if (!cw || !ch) return;
+      camera.aspect = cw / ch;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(cw, ch);
     };
 
-    window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver(handleResize);
+    ro.observe(container);
+
     animate();
 
     sceneRef.current = {
@@ -126,7 +143,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     };
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
       if (sceneRef.current) {
         cancelAnimationFrame(sceneRef.current.animationId);
         sceneRef.current.scene.traverse((object) => {
@@ -140,8 +157,8 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
           }
         });
         sceneRef.current.renderer.dispose();
-        if (containerRef.current && sceneRef.current.renderer.domElement) {
-          containerRef.current.removeChild(sceneRef.current.renderer.domElement);
+        if (container && sceneRef.current.renderer.domElement) {
+          container.removeChild(sceneRef.current.renderer.domElement);
         }
       }
     };

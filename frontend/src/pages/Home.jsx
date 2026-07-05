@@ -312,7 +312,7 @@ export default function Home() {
       {/* ── Component showcase — left: Embla carousel | right: text + CTA ── */}
       {/* Distinct bg (#0D0D1E) separates this from the bg-base sections above and below */}
       {/* No overflow-hidden here — the arrow buttons sit outside the carousel track     */}
-      <section className="py-12 sm:py-16 relative overflow-hidden" style={{ background: "#0D0D1E" }}>
+      <section className="py-12 sm:py-16 lg:py-20 relative overflow-hidden" style={{ background: "#0D0D1E" }}>
         {/* Subtle indigo glow from the top — visual bridge from the company carousel */}
         <div
           aria-hidden="true"
@@ -321,8 +321,10 @@ export default function Home() {
             background: "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 70%)",
           }}
         />
-        <div className="relative max-w-4xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+        {/* max-w-5xl gives the carousel room to breathe on large screens */}
+        <div className="relative max-w-5xl mx-auto px-6">
+          {/* 3:2 split — carousel gets 60% so cards have space to grow */}
+          <div className="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-8 lg:gap-16 items-center">
 
             {/* Left: Embla carousel — 2 cards on mobile, 3 on sm+ */}
             <div className="px-10"> {/* side padding keeps arrow buttons visible */}
@@ -345,14 +347,14 @@ export default function Home() {
             </div>
 
             {/* Right: heading, description, CTA */}
-            <div className="flex flex-col items-center text-center gap-5 px-2 sm:px-0">
+            <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-5 px-2 sm:px-0">
               <h2
                 className="font-display font-semibold text-[1.625rem] sm:text-[1.75rem] md:text-[2rem] text-ink leading-[1.15] tracking-[-0.02em] text-balance"
               >
                 14 components,<br />drag and drop
               </h2>
               <p className="text-muted text-sm leading-relaxed max-w-[34ch]">
-                Every building block for distributed systems — from ingress to async. Wire them up on the canvas and simulate load in real time.
+                Every building block for distributed systems, from ingress to async. Wire them up on the canvas and simulate load in real time.
               </p>
               <Link
                 to="/sandbox"
