@@ -1,8 +1,12 @@
 # deps
 node_modules/
 .venv/
+venv/
 __pycache__/
 *.pyc
+
+# local databases (SQLite dev fallback)
+*.db
 
 # env / secrets
 .env

@@ -23,9 +23,11 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
 
 - Frontend: React + Vite, React Flow (canvas), Tailwind, shadcn/ui, Zustand
 - Backend: FastAPI (Python), NetworkX (graph), BeautifulSoup (scraping)
-- DB/Auth: Supabase (Postgres + Auth, RLS on)
+- DB/Auth: self-hosted Postgres + custom FastAPI auth (SQLAlchemy + Alembic +
+  JWT). Local via docker-compose; AWS later. (Swapped from Supabase — see
+  "Auth swap" note under Decisions.)
 - AI: Claude API — model `claude-sonnet-4-20250514` (see NOTE under Decisions)
-- Hosting: Vercel (frontend), Render (backend)
+- Hosting: Vercel (frontend), AWS (backend + Postgres) — was Render/Supabase
 
 ---
 
@@ -51,8 +53,22 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
 - **AI calls are always context-scoped.** Graph state or case-study context is
   always in the prompt — never generic open-ended chat. WHY: relevant answers,
   predictable token cost, no "chatbot" drift.
-- **Supabase RLS enabled.** Users read/write only their own `designs` and
-  `challenge_attempts`.
+- **Auth swap: self-hosted, not Supabase.** DECISION (2026-07-05): rolled our
+  own auth on self-hosted Postgres instead of Supabase Auth + RLS. WHY: learning
+  value + interview talking points (how real auth is built), and full control
+  for AWS self-hosting later. Current implementation:
+  - Password hashing: **bcrypt** (passlib) — `services/auth.py`.
+  - Tokens: **HS256 JWT, access-token only**, 60-min expiry, `sub` = user id.
+    No refresh token yet (planned). Sent as `Authorization: Bearer` header
+    (not an httpOnly cookie yet — planned when the frontend wires in).
+  - Schema: SQLAlchemy models (`users`, `designs`, `challenge_attempts`),
+    Alembic migrations. UUID string PKs.
+- **Ownership enforced in the app layer, not the DB.** With Supabase RLS gone,
+  the "users touch only their own rows" guarantee now lives in FastAPI:
+  `get_current_user` (`dependencies.py`) resolves the caller, and every
+  `designs` / `challenge_attempts` query MUST filter by `user_id`. WHY this
+  matters: forgetting the filter = a data leak that RLS used to catch for us.
+  Every ownership-scoped route needs an explicit `user_id` check.
 - **Canvas is optimistic.** UI updates instantly; the simulation result arrives
   async and reconciles.
 
@@ -64,10 +80,10 @@ NOTE: spec pins the AI model to `claude-sonnet-4-20250514`. A newer Sonnet
 
 ## Ground rules for Claude Code in this repo
 
-- **DO NOT implement `backend/engine/simulation.py`.** Satyam writes the
-  simulation engine core by hand (interview credibility). You may scaffold the
-  interface, write tests, and review — but do not fill in the traversal or the
-  per-component strategy logic unless explicitly asked.
+- **Engine rule lifted (2026-07-07):** Satyam explicitly asked Claude to build
+  the full simulation engine to industry grade. It lives in `backend/engine/`
+  with a design walkthrough in `backend/BACKEND_LOG.md` so Satyam can still own
+  every line for interviews. Read that log before touching engine code.
 - Match the existing folder structure; don't invent new top-level dirs.
 - Keep components small and single-purpose. No god components.
 - Don't add dependencies without flagging why; prefer the stack above.
@@ -83,9 +99,15 @@ Prompt shape that works best in this repo:
 
 ## Build phases
 
-2 Wireframes ✅ · **3 Repo + CLAUDE.md (current)** · 4 Frontend canvas ·
-5 Simulation engine *(Satyam writes)* · 6 Wire FE↔BE · 7 Case studies + ingest ·
-8 Challenges + scoring · 9 Auth + save + dashboard · 10 AI features · 11 Polish + deploy
+2 Wireframes ✅ · 3 Repo + CLAUDE.md ✅ · 4 Frontend canvas ✅ ·
+5 Simulation engine ✅ · 6 Wire FE↔BE ✅ · 7 Case studies (curated JSON; scraper
+ingest still stubbed) ✅ · 8 Challenges + scoring ✅ · 9 Auth + save + dashboard ✅ ·
+10 AI features ✅ (needs ANTHROPIC_API_KEY) · **11 Polish + deploy (current)**
+
+Big build 2026-07-07: sandbox canvas, challenge workspace + scoring, case-study
+reader + "Simulate This", learn layer (`frontend/src/data/concepts.js`), auth
+UI + dashboard, full engine + content + tests. All backend decisions are logged
+in `backend/BACKEND_LOG.md` — keep appending there for backend work.
 
 See `@docs/spec.md` for the full locked spec (schemas, component contracts,
 failure modes, simulation output shape).
