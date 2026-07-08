@@ -8,6 +8,13 @@
       "cwd": "frontend",
       "port": 5173,
       "autoPort": true
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "main:app", "--port", "8000"],
+      "cwd": "backend",
+      "port": 8000
     }
   ]
 }

@@ -2,15 +2,403 @@
   {
     "slug": "url-shortener",
     "title": "Design a URL Shortener",
-    "description": "Build a service that turns long URLs into short codes and redirects on lookup. Handle read-heavy traffic.",
+    "description": "Build a service that turns long URLs into short codes and redirects on lookup. Reads massively outnumber writes — a redirect must be instant, and one popular link can pull millions of hits. Classic first system-design interview question, done right.",
     "requirements": [
       "Accept a long URL and return a short code",
-      "Redirect short code to original URL",
-      "Handle high read volume (reads >> writes)",
-      "Avoid single points of failure on the read path"
+      "Redirect a short code to the original URL fast",
+      "Handle a read-heavy workload (reads >> writes)",
+      "Avoid a single point of failure on the read path",
+      "Keep redirect latency well under the budget"
     ],
-    "reference_graph": { "nodes": [], "edges": [] },
     "difficulty": "beginner",
-    "tags": ["caching", "read-heavy", "key-value"]
+    "tags": ["caching", "read-heavy", "key-value"],
+    "load_rps": 2000,
+    "workload": { "read_pct": 90 },
+    "latency_budget_ms": 200,
+    "required_components": ["client", "load_balancer", "app_server", "cache", "sql_db"],
+    "bonus_components": ["api_gateway", "rate_limiter"],
+    "reference_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Users", "config": {} },
+        { "id": "gw", "type": "api_gateway", "label": "API Gateway", "config": { "rate_limit": 5000 } },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "app1", "type": "app_server", "label": "App Server A", "config": { "instances": 3 } },
+        { "id": "app2", "type": "app_server", "label": "App Server B", "config": { "instances": 3 } },
+        { "id": "cache", "type": "cache", "label": "Redis (code → URL)", "config": { "hit_rate": 80 } },
+        { "id": "db", "type": "sql_db", "label": "SQL (URL table)", "config": { "replicas": 1 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "gw" },
+        { "id": "e2", "source": "gw", "target": "lb" },
+        { "id": "e3", "source": "lb", "target": "app1" },
+        { "id": "e4", "source": "lb", "target": "app2" },
+        { "id": "e5", "source": "app1", "target": "cache" },
+        { "id": "e6", "source": "app2", "target": "cache" },
+        { "id": "e7", "source": "cache", "target": "db" }
+      ]
+    },
+    "hints": [
+      "90% of your traffic is redirects (reads). What component serves repeated reads without touching the database?",
+      "One app server is a single point of failure — put a load balancer in front of at least two.",
+      "Wire it client → load balancer → app servers → cache → SQL. The cache absorbs most reads; the primary only sees writes and cache misses."
+    ]
+  },
+  {
+    "slug": "instagram-feed",
+    "title": "Design an Instagram-style Feed",
+    "description": "Millions of users scroll a home feed stitched from the people they follow. Reads dwarf writes, but every new post has to fan out to followers without blocking the poster. Balance a hot read path against an async write path.",
+    "requirements": [
+      "Serve feed reads at 10k RPS without melting the datastore",
+      "Absorb repeated media requests at the edge",
+      "Fan out new posts asynchronously — posting must not block",
+      "Store feed data in a horizontally scalable store",
+      "Stay inside the latency budget on the read path"
+    ],
+    "difficulty": "intermediate",
+    "tags": ["fan-out", "read-heavy", "cdn", "async"],
+    "load_rps": 10000,
+    "workload": { "read_pct": 95 },
+    "latency_budget_ms": 250,
+    "required_components": ["client", "cdn", "load_balancer", "app_server", "cache", "nosql_db"],
+    "bonus_components": ["message_queue", "worker"],
+    "reference_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Mobile Apps", "config": {} },
+        { "id": "cdn", "type": "cdn", "label": "CDN (media)", "config": { "hit_rate": 40 } },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "app1", "type": "app_server", "label": "Feed API 1", "config": { "instances": 6 } },
+        { "id": "app2", "type": "app_server", "label": "Feed API 2", "config": { "instances": 6 } },
+        { "id": "app3", "type": "app_server", "label": "Feed API 3", "config": { "instances": 6 } },
+        { "id": "cache", "type": "cache", "label": "Feed Cache", "config": { "hit_rate": 80 } },
+        { "id": "nosql", "type": "nosql_db", "label": "Cassandra (feeds)", "config": { "shards": 3 } },
+        { "id": "queue", "type": "message_queue", "label": "Fan-out Queue", "config": {} },
+        { "id": "worker", "type": "worker", "label": "Fan-out Workers", "config": { "instances": 8, "consume_rps": 1000 } },
+        { "id": "storage", "type": "object_storage", "label": "Media Store", "config": {} }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "cdn" },
+        { "id": "e2", "source": "cdn", "target": "lb" },
+        { "id": "e3", "source": "lb", "target": "app1" },
+        { "id": "e4", "source": "lb", "target": "app2" },
+        { "id": "e5", "source": "lb", "target": "app3" },
+        { "id": "e6", "source": "app1", "target": "cache" },
+        { "id": "e7", "source": "app2", "target": "cache" },
+        { "id": "e8", "source": "app3", "target": "cache" },
+        { "id": "e9", "source": "cache", "target": "nosql" },
+        { "id": "e10", "source": "app1", "target": "queue" },
+        { "id": "e11", "source": "app2", "target": "queue" },
+        { "id": "e12", "source": "app3", "target": "queue" },
+        { "id": "e13", "source": "queue", "target": "worker" },
+        { "id": "e14", "source": "worker", "target": "storage" }
+      ]
+    },
+    "hints": [
+      "Media is static and identical for everyone — what belongs at the edge, before traffic even reaches your servers?",
+      "Posting a photo triggers writes to thousands of follower feeds. Don't do that synchronously — buffer it.",
+      "Read path: CDN → LB → app servers → feed cache → NoSQL. Write path: app servers → queue → workers. Two paths, two problems."
+    ]
+  },
+  {
+    "slug": "whatsapp-chat",
+    "title": "Design a Chat App like WhatsApp",
+    "description": "Messages flow both ways: every send is a write, every receive is a read, and users notice a 2-second delay instantly. Keep connection handling separate from message persistence, and never lose a message even when the store hiccups.",
+    "requirements": [
+      "Handle 8k RPS of mixed send/receive traffic",
+      "Persist every message durably — no drops",
+      "Decouple connection servers from the message store",
+      "Scale the message store horizontally",
+      "Keep end-to-end latency low enough to feel instant"
+    ],
+    "difficulty": "intermediate",
+    "tags": ["messaging", "write-heavy", "queues", "realtime"],
+    "load_rps": 8000,
+    "workload": { "read_pct": 50 },
+    "latency_budget_ms": 150,
+    "required_components": ["client", "load_balancer", "app_server", "message_queue", "worker", "nosql_db"],
+    "bonus_components": ["cache"],
+    "reference_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Phones", "config": {} },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "app1", "type": "app_server", "label": "Chat Server 1", "config": { "instances": 6 } },
+        { "id": "app2", "type": "app_server", "label": "Chat Server 2", "config": { "instances": 6 } },
+        { "id": "app3", "type": "app_server", "label": "Chat Server 3", "config": { "instances": 6 } },
+        { "id": "app4", "type": "app_server", "label": "Chat Server 4", "config": { "instances": 6 } },
+        { "id": "queue", "type": "message_queue", "label": "Message Bus", "config": {} },
+        { "id": "worker", "type": "worker", "label": "Delivery Workers", "config": { "instances": 11, "consume_rps": 1000 } },
+        { "id": "nosql", "type": "nosql_db", "label": "Message Store", "config": { "shards": 6 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "lb" },
+        { "id": "e2", "source": "lb", "target": "app1" },
+        { "id": "e3", "source": "lb", "target": "app2" },
+        { "id": "e4", "source": "lb", "target": "app3" },
+        { "id": "e5", "source": "lb", "target": "app4" },
+        { "id": "e6", "source": "app1", "target": "queue" },
+        { "id": "e7", "source": "app2", "target": "queue" },
+        { "id": "e8", "source": "app3", "target": "queue" },
+        { "id": "e9", "source": "app4", "target": "queue" },
+        { "id": "e10", "source": "queue", "target": "worker" },
+        { "id": "e11", "source": "worker", "target": "nosql" }
+      ]
+    },
+    "hints": [
+      "Chat traffic is ~50/50 read/write. A cache barely helps here — what absorbs write spikes instead?",
+      "If the message store slows down, connection servers must not stall. Put a buffer between them.",
+      "Client → LB → chat servers → queue → workers → sharded NoSQL. Size the workers so the queue never lags at 8k RPS."
+    ]
+  },
+  {
+    "slug": "youtube-streaming",
+    "title": "Design Video Streaming like YouTube",
+    "description": "Almost every request is someone watching a video — and the same viral videos over and over. Serving bytes from your origin at 20k RPS is a losing game; the architecture question is how little traffic you can let reach it.",
+    "requirements": [
+      "Serve 20k RPS of overwhelmingly-read traffic",
+      "Absorb repeat video requests before they hit your origin",
+      "Store video files in effectively-infinite blob storage",
+      "Keep metadata lookups off the video path",
+      "Process uploads asynchronously (transcoding)"
+    ],
+    "difficulty": "advanced",
+    "tags": ["cdn", "video", "read-heavy", "blob-storage"],
+    "load_rps": 20000,
+    "workload": { "read_pct": 98 },
+    "latency_budget_ms": 300,
+    "required_components": ["client", "cdn", "load_balancer", "app_server", "object_storage"],
+    "bonus_components": ["dns", "message_queue", "cache"],
+    "reference_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Viewers", "config": {} },
+        { "id": "dns", "type": "dns", "label": "DNS", "config": {} },
+        { "id": "cdn", "type": "cdn", "label": "Edge CDN", "config": { "hit_rate": 90 } },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "app1", "type": "app_server", "label": "Video API 1", "config": { "instances": 4 } },
+        { "id": "app2", "type": "app_server", "label": "Video API 2", "config": { "instances": 4 } },
+        { "id": "cache", "type": "cache", "label": "Metadata Cache", "config": { "hit_rate": 80 } },
+        { "id": "db", "type": "sql_db", "label": "Metadata DB", "config": { "replicas": 1 } },
+        { "id": "storage", "type": "object_storage", "label": "Video Blobs", "config": {} },
+        { "id": "queue", "type": "message_queue", "label": "Transcode Queue", "config": {} },
+        { "id": "worker", "type": "worker", "label": "Transcoders", "config": { "instances": 6, "consume_rps": 500 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "dns" },
+        { "id": "e2", "source": "dns", "target": "cdn" },
+        { "id": "e3", "source": "cdn", "target": "lb" },
+        { "id": "e4", "source": "lb", "target": "app1" },
+        { "id": "e5", "source": "lb", "target": "app2" },
+        { "id": "e6", "source": "app1", "target": "cache" },
+        { "id": "e7", "source": "app2", "target": "cache" },
+        { "id": "e8", "source": "cache", "target": "db" },
+        { "id": "e9", "source": "app1", "target": "storage" },
+        { "id": "e10", "source": "app2", "target": "storage" },
+        { "id": "e11", "source": "app1", "target": "queue" },
+        { "id": "e12", "source": "app2", "target": "queue" },
+        { "id": "e13", "source": "queue", "target": "worker" },
+        { "id": "e14", "source": "worker", "target": "storage" }
+      ]
+    },
+    "hints": [
+      "98% reads of highly repetitive content — a CDN with a high hit rate turns 20k RPS into a trickle at your origin.",
+      "Video bytes and video metadata are different problems: blobs go to object storage, titles and view counts go to a database behind a cache.",
+      "Uploads are rare but heavy. Transcode through a queue + workers so an upload burst never touches the watch path."
+    ]
+  },
+  {
+    "slug": "ride-sharing-dispatch",
+    "title": "Design Ride-Sharing Dispatch",
+    "description": "Riders request cars while thousands of drivers stream GPS pings every few seconds. Matching must be fast, location writes are relentless, and losing a dispatch event means someone stands in the rain. Design the pipeline that keeps up.",
+    "requirements": [
+      "Ingest 5k RPS of mixed ride requests and location pings",
+      "Protect the system from bursty client retries",
+      "Buffer dispatch events so no request is lost",
+      "Serve driver-location reads without hammering the store",
+      "Use a store that scales writes horizontally"
+    ],
+    "difficulty": "advanced",
+    "tags": ["geo", "write-heavy", "queues", "realtime"],
+    "load_rps": 5000,
+    "workload": { "read_pct": 60 },
+    "latency_budget_ms": 200,
+    "required_components": ["client", "api_gateway", "load_balancer", "app_server", "message_queue", "worker", "nosql_db"],
+    "bonus_components": ["cache"],
+    "reference_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Rider & Driver Apps", "config": {} },
+        { "id": "gw", "type": "api_gateway", "label": "API Gateway", "config": { "rate_limit": 10000 } },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "app1", "type": "app_server", "label": "Dispatch API 1", "config": { "instances": 5 } },
+        { "id": "app2", "type": "app_server", "label": "Dispatch API 2", "config": { "instances": 5 } },
+        { "id": "app3", "type": "app_server", "label": "Dispatch API 3", "config": { "instances": 5 } },
+        { "id": "cache", "type": "cache", "label": "Driver Location Cache", "config": { "hit_rate": 80 } },
+        { "id": "queue", "type": "message_queue", "label": "Dispatch Events", "config": {} },
+        { "id": "worker", "type": "worker", "label": "Matcher Workers", "config": { "instances": 8, "consume_rps": 1000 } },
+        { "id": "nosql", "type": "nosql_db", "label": "Geo Store", "config": { "shards": 6 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "gw" },
+        { "id": "e2", "source": "gw", "target": "lb" },
+        { "id": "e3", "source": "lb", "target": "app1" },
+        { "id": "e4", "source": "lb", "target": "app2" },
+        { "id": "e5", "source": "lb", "target": "app3" },
+        { "id": "e6", "source": "app1", "target": "queue" },
+        { "id": "e7", "source": "app2", "target": "queue" },
+        { "id": "e8", "source": "app3", "target": "queue" },
+        { "id": "e9", "source": "app1", "target": "cache" },
+        { "id": "e10", "source": "app2", "target": "cache" },
+        { "id": "e11", "source": "app3", "target": "cache" },
+        { "id": "e12", "source": "queue", "target": "worker" },
+        { "id": "e13", "source": "worker", "target": "nosql" },
+        { "id": "e14", "source": "cache", "target": "nosql" }
+      ]
+    },
+    "hints": [
+      "GPS pings are a firehose of small writes. What component lets you accept them instantly and process them at your own pace?",
+      "\"Where is my driver?\" is asked far more often than the answer changes — cache the hot locations.",
+      "Gateway → LB → dispatch APIs, then split: reads hit the location cache, events flow through a queue into matcher workers writing to a sharded geo store."
+    ]
+  },
+  {
+    "slug": "flash-sale-ecommerce",
+    "title": "Design a Flash-Sale E-Commerce System",
+    "description": "A sneaker drop hits at noon: 15k RPS of traffic, nearly a third of it checkout writes, and your SQL primary is the most breakable thing you own. Survive the spike without overselling and without a database on fire.",
+    "requirements": [
+      "Survive a 15k RPS spike with a heavy write share",
+      "Serve product pages from the edge",
+      "Shield the order database from direct write pressure",
+      "Process orders through a durable buffer",
+      "Keep checkout latency inside budget"
+    ],
+    "difficulty": "advanced",
+    "tags": ["spike", "write-heavy", "queues", "e-commerce"],
+    "load_rps": 15000,
+    "workload": { "read_pct": 70 },
+    "latency_budget_ms": 250,
+    "required_components": ["client", "cdn", "api_gateway", "load_balancer", "app_server", "message_queue", "worker", "sql_db"],
+    "bonus_components": ["cache", "rate_limiter"],
+    "reference_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Shoppers", "config": {} },
+        { "id": "cdn", "type": "cdn", "label": "CDN (product pages)", "config": { "hit_rate": 70 } },
+        { "id": "gw", "type": "api_gateway", "label": "API Gateway", "config": { "rate_limit": 20000 } },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "app1", "type": "app_server", "label": "Storefront 1", "config": { "instances": 5 } },
+        { "id": "app2", "type": "app_server", "label": "Storefront 2", "config": { "instances": 5 } },
+        { "id": "app3", "type": "app_server", "label": "Storefront 3", "config": { "instances": 5 } },
+        { "id": "app4", "type": "app_server", "label": "Storefront 4", "config": { "instances": 5 } },
+        { "id": "queue", "type": "message_queue", "label": "Order Queue", "config": {} },
+        { "id": "worker", "type": "worker", "label": "Order Processors", "config": { "instances": 11, "consume_rps": 1000 } },
+        { "id": "db", "type": "sql_db", "label": "Orders DB", "config": { "primary_capacity": 6000, "replicas": 2, "read_capacity_per_replica": 2500 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "cdn" },
+        { "id": "e2", "source": "cdn", "target": "gw" },
+        { "id": "e3", "source": "gw", "target": "lb" },
+        { "id": "e4", "source": "lb", "target": "app1" },
+        { "id": "e5", "source": "lb", "target": "app2" },
+        { "id": "e6", "source": "lb", "target": "app3" },
+        { "id": "e7", "source": "lb", "target": "app4" },
+        { "id": "e8", "source": "app1", "target": "queue" },
+        { "id": "e9", "source": "app2", "target": "queue" },
+        { "id": "e10", "source": "app3", "target": "queue" },
+        { "id": "e11", "source": "app4", "target": "queue" },
+        { "id": "e12", "source": "queue", "target": "worker" },
+        { "id": "e13", "source": "worker", "target": "db" }
+      ]
+    },
+    "hints": [
+      "The product page is identical for everyone until stock runs out — let the CDN eat those reads.",
+      "Your SQL primary handles ~1k writes/sec by default. At 4.5k checkout writes, either the primary grows or something buffers. Prefer the buffer.",
+      "CDN → gateway → LB → storefronts → order queue → workers → SQL. Size the workers and the primary so nothing crosses 80%."
+    ]
+  },
+  {
+    "slug": "notification-fanout",
+    "title": "Design a Notification Fan-Out System",
+    "description": "One event — 'your order shipped' — becomes a push, an email, and an SMS to millions of devices. Almost everything is a write, producers must never wait on delivery, and a slow SMS provider can't be allowed to back up the world.",
+    "requirements": [
+      "Ingest 6k RPS of notification events (write-heavy)",
+      "Never block producers on delivery",
+      "Drain deliveries with horizontally scalable workers",
+      "Record delivery status in a scalable store",
+      "Tolerate slow third-party providers gracefully"
+    ],
+    "difficulty": "intermediate",
+    "tags": ["fan-out", "async", "write-heavy", "queues"],
+    "load_rps": 6000,
+    "workload": { "read_pct": 20 },
+    "latency_budget_ms": 400,
+    "required_components": ["client", "app_server", "message_queue", "worker", "nosql_db"],
+    "bonus_components": ["api_gateway", "load_balancer"],
+    "reference_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Producer Services", "config": {} },
+        { "id": "gw", "type": "api_gateway", "label": "Ingest Gateway", "config": { "rate_limit": 10000 } },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "app1", "type": "app_server", "label": "Notification API 1", "config": { "instances": 8 } },
+        { "id": "app2", "type": "app_server", "label": "Notification API 2", "config": { "instances": 8 } },
+        { "id": "queue", "type": "message_queue", "label": "Delivery Queue", "config": {} },
+        { "id": "worker", "type": "worker", "label": "Delivery Workers", "config": { "instances": 8, "consume_rps": 1000 } },
+        { "id": "nosql", "type": "nosql_db", "label": "Delivery Log", "config": { "shards": 4 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "gw" },
+        { "id": "e2", "source": "gw", "target": "lb" },
+        { "id": "e3", "source": "lb", "target": "app1" },
+        { "id": "e4", "source": "lb", "target": "app2" },
+        { "id": "e5", "source": "app1", "target": "queue" },
+        { "id": "e6", "source": "app2", "target": "queue" },
+        { "id": "e7", "source": "queue", "target": "worker" },
+        { "id": "e8", "source": "worker", "target": "nosql" }
+      ]
+    },
+    "hints": [
+      "With 80% writes, caching is nearly useless. This problem is entirely about the write pipeline.",
+      "The queue is the heart: producers enqueue and move on; workers drain at whatever rate providers allow.",
+      "Ingest API → queue → workers → delivery log. Check the queue's lag warning — if workers drain slower than 6k/s, you'll see it."
+    ]
+  },
+  {
+    "slug": "rate-limited-public-api",
+    "title": "Design a Rate-Limited Public API",
+    "description": "You're exposing a public API to the internet: abusive clients, scrapers, and one customer who put a retry loop in a for loop. Protect your backend with explicit limits, then serve legitimate read traffic fast and cheap.",
+    "requirements": [
+      "Reject abusive traffic before it reaches app servers",
+      "Serve 3k RPS of mostly-read API calls",
+      "Cache hot responses to keep the database cool",
+      "No single point of failure at the compute tier",
+      "Respond well inside the latency budget"
+    ],
+    "difficulty": "beginner",
+    "tags": ["rate-limiting", "api", "caching", "read-heavy"],
+    "load_rps": 3000,
+    "workload": { "read_pct": 85 },
+    "latency_budget_ms": 150,
+    "required_components": ["client", "rate_limiter", "load_balancer", "app_server", "cache", "sql_db"],
+    "bonus_components": ["api_gateway", "cdn"],
+    "reference_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "API Consumers", "config": {} },
+        { "id": "rl", "type": "rate_limiter", "label": "Rate Limiter", "config": { "threshold": 4000 } },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "app1", "type": "app_server", "label": "API Server 1", "config": { "instances": 4 } },
+        { "id": "app2", "type": "app_server", "label": "API Server 2", "config": { "instances": 4 } },
+        { "id": "cache", "type": "cache", "label": "Response Cache", "config": { "hit_rate": 80 } },
+        { "id": "db", "type": "sql_db", "label": "Primary DB", "config": { "replicas": 1 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "rl" },
+        { "id": "e2", "source": "rl", "target": "lb" },
+        { "id": "e3", "source": "lb", "target": "app1" },
+        { "id": "e4", "source": "lb", "target": "app2" },
+        { "id": "e5", "source": "app1", "target": "cache" },
+        { "id": "e6", "source": "app2", "target": "cache" },
+        { "id": "e7", "source": "cache", "target": "db" }
+      ]
+    },
+    "hints": [
+      "Put the rate limiter FIRST — work you reject early is work everything downstream never sees.",
+      "85% reads means a response cache pays for itself immediately; the database should only see misses and writes.",
+      "Rate limiter → LB → two app servers → cache → SQL. Set the threshold above normal load (3k) so real users aren't clipped."
+    ]
   }
 ]

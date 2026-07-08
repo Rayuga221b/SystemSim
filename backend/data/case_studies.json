@@ -1,0 +1,326 @@
+[
+  {
+    "slug": "discord-scylladb",
+    "company": "Discord",
+    "title": "Trillions of Messages: Cassandra to ScyllaDB",
+    "one_liner": "How Discord escaped garbage-collection death spirals by moving its message store from Cassandra to ScyllaDB.",
+    "difficulty": "advanced",
+    "tags": ["nosql", "hot-partition", "database-migration", "messaging"],
+    "published": true,
+    "problem": "Discord stores every message ever sent — trillions of them — keyed by channel and time bucket. On Cassandra this worked until it didn't: message history for a busy channel lives on one partition, so a server with a million members chatting concentrates enormous read and write pressure on a handful of nodes. These **hot partitions** meant one loud community could degrade latency for everyone sharing those replicas.\n\nWorse, Cassandra runs on the JVM. Under hot-partition pressure, nodes fell into garbage-collection pauses; a pausing node makes its neighbours pick up the slack, which pushes *them* toward GC, and the cluster enters what Discord engineers called a 'GC death spiral.' On-call life became a rotation of manually compacting and babysitting a 177-node cluster where maintenance was scarier than the traffic itself.\n\nReads of old history were the killer: Cassandra's LSM storage made reading colder data expensive, and Discord's workload — recent messages hammered constantly, old messages fetched unpredictably — was exactly the pattern that hurt most.",
+    "solution": "Discord migrated to **ScyllaDB**, a Cassandra-compatible store rewritten in C++ with a shard-per-core architecture — no JVM, no GC pauses, and far better performance per node. The new message cluster shrank from 177 nodes to 72 while holding more data.\n\nThe more interesting fix was architectural, not just a database swap. Discord built **data services** in Rust that sit between the API layer and the database. These services do *request coalescing*: if a thousand users request the same hot message history at once, the service issues **one** database query and fans the answer back out. Consistent-hash routing sends requests for the same channel to the same service instance, making coalescing effective and turning the hot-partition problem into a cache-friendly one.\n\nThe migration itself moved a trillion messages using a custom Rust migrator reading from Cassandra and writing to ScyllaDB at millions of rows per second, finishing in days instead of the months the naive plan projected. Since then, the 'GC death spiral' pager alert simply stopped existing.",
+    "scale_context": {
+      "messages_stored": "over 1 trillion",
+      "cluster_size": "177 Cassandra nodes → 72 ScyllaDB nodes",
+      "migration_speed": "~3M rows/sec via custom Rust migrator",
+      "users": "150M+ monthly actives at the time"
+    },
+    "lessons": [
+      "Hot partitions are a data-modeling problem — a bigger cluster just gives you more nodes to melt.",
+      "GC pauses under load are contagious: one slow node shifts load and makes the next node slow.",
+      "Put a coalescing layer in front of the database: 1,000 identical reads should become 1 query.",
+      "Sometimes the fix is the same data model on a fundamentally better engine — compatibility made the migration tractable.",
+      "Route by key (consistent hashing) so the same hot data lands on the same service instance — that's what makes coalescing work."
+    ],
+    "components": ["client", "load_balancer", "app_server", "nosql_db", "cache"],
+    "starter_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Discord Clients", "config": {} },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "api1", "type": "app_server", "label": "API Cluster 1", "config": { "instances": 25 } },
+        { "id": "api2", "type": "app_server", "label": "API Cluster 2", "config": { "instances": 25 } },
+        { "id": "cassandra", "type": "nosql_db", "label": "Cassandra (messages)", "config": { "shards": 4, "rps_per_shard": 1500 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "lb" },
+        { "id": "e2", "source": "lb", "target": "api1" },
+        { "id": "e3", "source": "lb", "target": "api2" },
+        { "id": "e4", "source": "api1", "target": "cassandra" },
+        { "id": "e5", "source": "api2", "target": "cassandra" }
+      ]
+    },
+    "starter_load_rps": 20000,
+    "simulate_prompt": "Run 20k RPS and watch the message store melt like a hot partition — then add a cache (request coalescing) in front of it and re-run."
+  },
+  {
+    "slug": "twitter-timeline",
+    "company": "Twitter",
+    "title": "The Home Timeline: Push, Pull, and the Celebrity Problem",
+    "one_liner": "Why Twitter precomputes your timeline at write time — except for celebrities, where that same trick falls apart.",
+    "difficulty": "intermediate",
+    "tags": ["fan-out", "caching", "read-heavy", "timelines"],
+    "published": true,
+    "problem": "The naive home timeline is a query: 'fetch the latest tweets from everyone I follow, merge, sort.' At Twitter's read volume — hundreds of thousands of timeline requests per second — running that join against the tweet store on every page load is hopeless. Early Twitter did roughly this, and the **fail whale** became a mascot precisely because read-time assembly could not keep up.\n\nThe obvious inversion is **fan-out on write**: when someone tweets, push that tweet ID into a precomputed timeline list for each of their followers, stored in a giant Redis cluster. Reads become a single cache lookup — perfect. But now consider a user with 100 million followers: one tweet triggers 100 million list inserts. Celebrity tweets created write storms that could lag the whole fan-out pipeline for minutes, and every added follower makes it worse.\n\nSo each strategy fails at one extreme: pull dies under read load from normal users, push dies under write load from celebrities.",
+    "solution": "Twitter's answer is the classic **hybrid**. For ordinary users (the overwhelming majority), tweets are fanned out on write to followers' Redis-backed home timelines — reads stay O(1). For high-follower accounts, fan-out is skipped entirely; instead, celebrity tweets are **pulled at read time** and merged into the precomputed timeline when a follower actually loads it. You pay the merge cost only for the handful of celebrity accounts each user follows, not 100M writes per celebrity tweet.\n\nThe write path runs through an async pipeline: a tweet lands in the tweet store, then fan-out workers consume from queues and populate follower timelines in Redis at a controlled rate. The read path hits the timeline cache first and falls back to reconstruction only on cache miss (e.g. for dormant users evicted from the cache).\n\nThe general principle — precompute for the common case, compute lazily for the pathological case, and pick the strategy **per key, not per system** — shows up all over large-scale design.",
+    "scale_context": {
+      "timeline_reads": "~300k RPS at peak (timeline deliveries)",
+      "tweets_written": "~5-10k tweets/sec average",
+      "fanout_multiplier": "average tweet delivered to ~100s of timelines; celebrity tweets to 100M+",
+      "timeline_cache": "massive Redis cluster holding recent home timelines"
+    },
+    "lessons": [
+      "Fan-out on write turns expensive reads into cheap ones — by making writes expensive instead. Know which side you can afford.",
+      "Skewed distributions (followers) break uniform strategies; handle the head and the tail of the distribution differently.",
+      "A cache that is the product (the timeline IS a Redis list) is an architecture, not an optimization.",
+      "Async fan-out through queues lets you throttle write storms without dropping them.",
+      "Hybrid designs beat pure designs when the workload is power-law distributed."
+    ],
+    "components": ["client", "load_balancer", "app_server", "sql_db", "cache", "message_queue", "worker"],
+    "starter_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Twitter Clients", "config": {} },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "web1", "type": "app_server", "label": "Monorail 1", "config": { "instances": 10 } },
+        { "id": "web2", "type": "app_server", "label": "Monorail 2", "config": { "instances": 10 } },
+        { "id": "db", "type": "sql_db", "label": "Tweet Store (MySQL)", "config": { "primary_capacity": 1000, "replicas": 2, "read_capacity_per_replica": 2000 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "lb" },
+        { "id": "e2", "source": "lb", "target": "web1" },
+        { "id": "e3", "source": "lb", "target": "web2" },
+        { "id": "e4", "source": "web1", "target": "db" },
+        { "id": "e5", "source": "web2", "target": "db" }
+      ]
+    },
+    "starter_load_rps": 12000,
+    "simulate_prompt": "Run 12k RPS of read-time timeline assembly and meet the fail whale — then add a cache (precomputed timelines) and a queue + workers (async fan-out) to tame it."
+  },
+  {
+    "slug": "slack-websockets",
+    "company": "Slack",
+    "title": "Scaling Real-Time Messaging: Slack's Connection Fabric",
+    "one_liner": "How Slack keeps millions of long-lived websockets alive and delivers messages in milliseconds — and what the Channel Server rewrite fixed.",
+    "difficulty": "advanced",
+    "tags": ["websockets", "realtime", "connection-scaling", "pubsub"],
+    "published": true,
+    "problem": "Slack is not a request/response app: every open client holds a **persistent websocket**, and a message sent to a channel must reach every connected member in well under a second. Millions of concurrent connections means connection state itself becomes the scaling problem — each socket consumes server memory and file descriptors, and the servers holding them cannot simply be restarted without a reconnect stampede.\n\nSlack's original real-time system funnelled a team's traffic through a per-team **Message Server**; connecting users first downloaded a large snapshot of workspace state. Both choices aged badly as customers grew from tens to hundreds of thousands of users per workspace: the boot payload ballooned (huge JSON downloads before the app was usable), and a big team's message server became a hot single point — one giant customer could saturate it, and a crash disconnected the whole workspace at once.\n\nThe **thundering herd** made everything worse. A deploy, a network blip, or a message-server failure disconnects thousands of clients that all reconnect simultaneously, re-download state, and re-subscribe — a self-inflicted DDoS precisely when the system is weakest.",
+    "solution": "Slack rebuilt the real-time path as a layered connection fabric. Stateless-ish **Gateway Servers** (Envoy in front, WebSocket termination behind) hold client sockets at the edge, spread across regions so sockets terminate close to users. Behind them, **Channel Servers** own pub/sub state, sharded by channel ID via consistent hashing rather than by team — a huge workspace now spreads across many servers instead of melting one.\n\nBoot got lazy: instead of downloading the workspace up front, clients fetch a minimal payload and pull channel data on demand, which cut connect-time bandwidth and made reconnect storms survivable. Reconnects were further tamed with jittered backoff and by making session resume cheap.\n\nThe result is a system where messages route client → gateway → the channel's server → gateways of every subscriber, in milliseconds, and where any individual server can die without taking a customer offline. The design lesson: separate **connection state** (edge, cheap to rebuild) from **subscription state** (sharded, replicated) instead of coupling both to one process.",
+    "scale_context": {
+      "concurrent_connections": "millions of websockets at peak",
+      "message_delivery": "sub-500ms target end-to-end",
+      "largest_workspaces": "hundreds of thousands of users in one workspace",
+      "sharding": "channel-ID consistent hashing across channel servers"
+    },
+    "lessons": [
+      "Long-lived connections make servers stateful; plan for the reconnect stampede on day one.",
+      "Shard by the unit of traffic (channel), not the unit of billing (team) — customers grow unevenly.",
+      "Lazy loading isn't a frontend nicety at scale; boot payload size is an availability concern.",
+      "Terminate sockets at the edge and keep the brains behind them — each layer can then scale and fail independently.",
+      "Jittered backoff is the cheapest availability feature you will ever ship."
+    ],
+    "components": ["client", "load_balancer", "app_server", "message_queue", "worker", "nosql_db"],
+    "starter_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Slack Clients", "config": {} },
+        { "id": "lb", "type": "load_balancer", "label": "Edge LB", "config": {} },
+        { "id": "ms1", "type": "app_server", "label": "Team Message Server 1", "config": { "instances": 5 } },
+        { "id": "ms2", "type": "app_server", "label": "Team Message Server 2", "config": { "instances": 5 } },
+        { "id": "store", "type": "nosql_db", "label": "Channel State Store", "config": { "shards": 3 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "lb" },
+        { "id": "e2", "source": "lb", "target": "ms1" },
+        { "id": "e3", "source": "lb", "target": "ms2" },
+        { "id": "e4", "source": "ms1", "target": "store" },
+        { "id": "e5", "source": "ms2", "target": "store" }
+      ]
+    },
+    "starter_load_rps": 10000,
+    "simulate_prompt": "Run 10k RPS against the old per-team message servers and watch them saturate — then scale instances and add a queue to decouple delivery."
+  },
+  {
+    "slug": "shopify-flash-sales",
+    "company": "Shopify",
+    "title": "Surviving Flash Sales: Pods and the Checkout Stampede",
+    "one_liner": "How Shopify isolates a million merchants into 'pods' so one sneaker drop can't take down everyone's store.",
+    "difficulty": "intermediate",
+    "tags": ["sharding", "flash-sale", "isolation", "queues"],
+    "published": true,
+    "problem": "Shopify hosts millions of independent stores on shared infrastructure — which means one merchant's Super Bowl ad or sneaker drop becomes everyone's outage risk. Flash sales are the nastiest traffic shape there is: near-zero to hundreds of thousands of requests per second in under a minute, concentrated on ONE shop, with a huge share of cart and checkout **writes** that cannot be cached away.\n\nIn the early architecture, shops shared big MySQL databases behind the monolith. A flash sale would saturate the shared primary with checkout writes; unrelated merchants on the same database saw their stores slow to a crawl. The blast radius of one hot merchant was the whole platform, and adding read replicas didn't help — checkout traffic is writes.\n\nCheckout has another cruel property: every request matters. Dropping a browse request loses a pageview; dropping a checkout write loses money and oversells inventory. Load-shedding strategies that work for read traffic are not acceptable on the buy path.",
+    "solution": "Shopify's answer is the **pod architecture** (their take on cellular sharding). The platform is split into ~hundreds of pods, each a self-contained slice: its own MySQL primary, Redis, and workers, hosting a fixed subset of shops. A shop lives in exactly one pod, so a flash sale saturates *its* pod while every other pod stays healthy — blast-radius isolation by construction. Pods can run active-active across regions and be rebalanced by moving shops between pods.\n\nOn the hot path, checkout writes are buffered through **queues with backpressure**: during extreme spikes shoppers wait in a fair throttle/queue rather than hammering the primary until it dies. Inventory decrements and order processing happen through background jobs that drain at a rate the database can sustain. The storefront read side is aggressively cached and served from the edge, keeping browse traffic off the databases entirely.\n\nThe combination — cache the reads, queue the writes, and cap the blast radius with per-pod databases — lets a single shop absorb a stadium-sized stampede without other merchants noticing.",
+    "scale_context": {
+      "merchants": "millions of shops",
+      "flash_sale_peak": "checkout spikes of 10-100x baseline in seconds",
+      "architecture_unit": "~200+ pods, each with its own MySQL + Redis + workers",
+      "bfcm_scale": "Black Friday/Cyber Monday peaks measured in millions of RPS platform-wide"
+    },
+    "lessons": [
+      "Isolation beats optimization: cap the blast radius so a hot tenant only burns their own cell.",
+      "Read replicas don't save you from a write-heavy spike — only queues, sharding, or bigger primaries do.",
+      "On the money path, prefer making users wait (throttle/queue) over dropping their requests.",
+      "Shard by tenant when tenants are independent — it makes capacity, failure, and migration all tractable.",
+      "Design for the worst minute, not the average day."
+    ],
+    "components": ["client", "cdn", "load_balancer", "app_server", "message_queue", "worker", "sql_db"],
+    "starter_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Flash-Sale Shoppers", "config": {} },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "web1", "type": "app_server", "label": "Storefront 1", "config": { "instances": 6 } },
+        { "id": "web2", "type": "app_server", "label": "Storefront 2", "config": { "instances": 6 } },
+        { "id": "web3", "type": "app_server", "label": "Storefront 3", "config": { "instances": 6 } },
+        { "id": "db", "type": "sql_db", "label": "Shared MySQL Primary", "config": { "primary_capacity": 1000, "replicas": 1 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "lb" },
+        { "id": "e2", "source": "lb", "target": "web1" },
+        { "id": "e3", "source": "lb", "target": "web2" },
+        { "id": "e4", "source": "lb", "target": "web3" },
+        { "id": "e5", "source": "web1", "target": "db" },
+        { "id": "e6", "source": "web2", "target": "db" },
+        { "id": "e7", "source": "web3", "target": "db" }
+      ]
+    },
+    "starter_load_rps": 15000,
+    "simulate_prompt": "Run a 15k RPS drop (40% checkout writes) into one shared MySQL primary and watch it drown — then add a CDN for reads and an order queue + workers for writes."
+  },
+  {
+    "slug": "instagram-justin-bieber",
+    "company": "Instagram",
+    "title": "The Justin Bieber Problem: Celebrity Hot Keys",
+    "one_liner": "Why one celebrity's selfie used to melt Instagram's databases, and how denormalized counts and cache design fixed it.",
+    "difficulty": "intermediate",
+    "tags": ["hot-key", "caching", "denormalization", "read-heavy"],
+    "published": true,
+    "problem": "Early Instagram engineers half-joked that they had a dedicated class of outage: Justin Bieber posts a photo. Within seconds, millions of users pile onto ONE row's worth of data — the photo, its like count, its comments. This is the **hot key problem**: sharding spreads load beautifully only if load is spread across keys. A celebrity post concentrates it on one shard, one cache entry, one row.\n\nThe like count made it brutal. Computing likes as `SELECT COUNT(*) FROM likes WHERE photo_id = X` is fine at a thousand likes; at a million likes arriving in minutes it's a full-table scan-shaped disaster executed on every page render. Meanwhile the likes themselves are writes — millions of inserts targeting rows adjacent to the same hot key.\n\nCaching helps reads but introduces its own failure: when the hot entry expires or is invalidated (someone likes the photo — the count changed), thousands of concurrent renders miss the cache simultaneously and stampede the database to recompute the same value. That **cache stampede / thundering herd** turns one invalidation into a database spike.",
+    "solution": "Instagram's fixes were pragmatic and layered. First, **denormalize the count**: store `like_count` as a column on the media row, incremented atomically on each like, instead of counting rows at read time. A million-row COUNT becomes a single-row read. (Postgres and later their sharded fleet handled increments cheaply.)\n\nSecond, treat celebrity content as its own workload class. Hot posts get longer TTLs, stampede protection (one process recomputes on miss while others serve slightly-stale data), and their reads are absorbed by **memcached layers** replicated enough that one key doesn't live on one cache node. Slightly stale like counts are fine — nobody can tell 1,000,207 from 1,000,530 — so consistency is deliberately relaxed on the hot path.\n\nThe deeper lesson Instagram drew: uniform strategies fail under power-law traffic. The system needs a fast path for the 99.9% of normal posts and a special path for the 0.1% that generate half the load.",
+    "scale_context": {
+      "users": "hundreds of millions of actives (early-to-mid 2010s)",
+      "hot_post_traffic": "millions of views/likes on one post within minutes",
+      "infra": "sharded Postgres + layers of memcached",
+      "team_size": "famously ~13 engineers at 30M users"
+    },
+    "lessons": [
+      "Sharding assumes uniform keys; celebrities break that assumption — plan a hot-key path.",
+      "Never compute an aggregate at read time that you can maintain at write time (denormalized counters).",
+      "Stale-but-fast beats fresh-but-down: relax consistency exactly where users can't perceive it.",
+      "Protect caches from stampedes: on expiry, ONE recompute, everyone else serves stale.",
+      "Watch your traffic distribution, not just your traffic volume."
+    ],
+    "components": ["client", "load_balancer", "app_server", "cache", "sql_db"],
+    "starter_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Instagram Users", "config": {} },
+        { "id": "lb", "type": "load_balancer", "label": "Load Balancer", "config": {} },
+        { "id": "app1", "type": "app_server", "label": "Django Fleet 1", "config": { "instances": 16 } },
+        { "id": "app2", "type": "app_server", "label": "Django Fleet 2", "config": { "instances": 16 } },
+        { "id": "app3", "type": "app_server", "label": "Django Fleet 3", "config": { "instances": 16 } },
+        { "id": "app4", "type": "app_server", "label": "Django Fleet 4", "config": { "instances": 16 } },
+        { "id": "cache", "type": "cache", "label": "Memcached", "config": { "hit_rate": 80 } },
+        { "id": "db", "type": "sql_db", "label": "Postgres (media + likes)", "config": { "primary_capacity": 1000, "replicas": 1, "read_capacity_per_replica": 2000 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "lb" },
+        { "id": "e2", "source": "lb", "target": "app1" },
+        { "id": "e3", "source": "lb", "target": "app2" },
+        { "id": "e4", "source": "lb", "target": "app3" },
+        { "id": "e5", "source": "lb", "target": "app4" },
+        { "id": "e6", "source": "app1", "target": "cache" },
+        { "id": "e7", "source": "app2", "target": "cache" },
+        { "id": "e8", "source": "app3", "target": "cache" },
+        { "id": "e9", "source": "app4", "target": "cache" },
+        { "id": "e10", "source": "cache", "target": "db" }
+      ]
+    },
+    "starter_load_rps": 25000,
+    "simulate_prompt": "Post the Bieber selfie: run 25k RPS and watch cache misses plus like-writes crush the Postgres primary — then inject a cache_miss_spike failure to see the stampede, and fix it with replicas and a bigger primary."
+  },
+  {
+    "slug": "netflix-open-connect",
+    "company": "Netflix",
+    "title": "Open Connect and Chaos: Owning the Last Mile",
+    "one_liner": "Why Netflix built its own CDN inside ISPs — and then unleashed monkeys on its own control plane to prove it would survive.",
+    "difficulty": "advanced",
+    "tags": ["cdn", "chaos-engineering", "video", "resilience"],
+    "published": true,
+    "problem": "Netflix streaming is a bandwidth problem wearing a software costume: at peak it has accounted for double-digit percentages of ALL downstream internet traffic in North America. Serving those video bytes from AWS data centers (or third-party CDNs) meant paying to push petabytes across the public internet backbone, with quality hostage to congestion between Netflix and each viewer's ISP. Third-party CDNs were expensive, capacity during simultaneous global evening peaks wasn't guaranteed, and Netflix had no control over the part of the network that mattered most — the last miles.\n\nThe control plane had the opposite problem: everything that isn't video (login, browse, recommendations, play-button presses) ran as hundreds of microservices on AWS, where instances die routinely. Netflix's early years on EC2 taught them that at sufficient scale, hardware failure is not an event — it is the steady state. An architecture that only worked when all instances were healthy was an architecture that never worked.",
+    "solution": "For the data plane, Netflix built **Open Connect**: its own purpose-built CDN of storage appliances (OCAs) deployed *inside* ISP networks and at internet exchange points, free for ISPs to host because it slashes their transit costs too. Popular titles are pushed to appliances during off-peak hours based on regional viewing predictions, so an evening's streaming is served meters or kilometers from the viewer — over 95% of Netflix traffic never touches the public backbone. Steering is done at the DNS/control-plane level: AWS decides *which* OCA you stream from; the OCA just serves bytes.\n\nFor the control plane, Netflix institutionalized failure with **chaos engineering**: Chaos Monkey kills random production instances during business hours, forcing every service to be stateless, redundant, and quick to recover; Chaos Kong evacuates entire AWS regions. Services degrade gracefully — if recommendations die, you get a generic row, not an error page.\n\nThe split is the design: a hyper-specialized edge for the heavy, cacheable 95%, and a failure-hardened cloud for the light, dynamic 5%.",
+    "scale_context": {
+      "traffic_share": "~15% of global downstream internet traffic at peak (pre-2023 measurements)",
+      "edge_fleet": "18,000+ OCA appliances in 6,000+ ISP locations",
+      "offload": ">95% of video traffic served from Open Connect, not AWS",
+      "subscribers": "270M+ globally"
+    },
+    "lessons": [
+      "When one traffic class is 95% of your bytes and perfectly cacheable, build the edge around it.",
+      "Push content at off-peak, serve at peak: prediction turns bandwidth problems into storage problems.",
+      "Separate data plane from control plane — they have different failure modes and different owners.",
+      "If failures are the steady state, test in production on purpose (chaos engineering) or production will test you.",
+      "Graceful degradation is a product feature: a worse answer beats no answer."
+    ],
+    "components": ["client", "dns", "cdn", "load_balancer", "app_server", "object_storage"],
+    "starter_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Viewers (evening peak)", "config": {} },
+        { "id": "dns", "type": "dns", "label": "DNS Steering", "config": {} },
+        { "id": "lb", "type": "load_balancer", "label": "AWS ELB", "config": {} },
+        { "id": "api1", "type": "app_server", "label": "Playback API 1", "config": { "instances": 10 } },
+        { "id": "api2", "type": "app_server", "label": "Playback API 2", "config": { "instances": 10 } },
+        { "id": "api3", "type": "app_server", "label": "Playback API 3", "config": { "instances": 10 } },
+        { "id": "storage", "type": "object_storage", "label": "S3 (video masters)", "config": {} }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "dns" },
+        { "id": "e2", "source": "dns", "target": "lb" },
+        { "id": "e3", "source": "lb", "target": "api1" },
+        { "id": "e4", "source": "lb", "target": "api2" },
+        { "id": "e5", "source": "lb", "target": "api3" },
+        { "id": "e6", "source": "api1", "target": "storage" },
+        { "id": "e7", "source": "api2", "target": "storage" },
+        { "id": "e8", "source": "api3", "target": "storage" }
+      ]
+    },
+    "starter_load_rps": 30000,
+    "simulate_prompt": "Stream a 30k RPS evening peak straight from origin and watch the playback tier saturate — then add a CDN with a 90%+ hit rate and inject node_crash on an app server to test your resilience, Chaos Monkey style."
+  },
+  {
+    "slug": "prime-video-monolith",
+    "company": "Amazon Prime Video",
+    "title": "When Microservices Cost 90% Too Much: Back to the Monolith",
+    "one_liner": "Prime Video's monitoring team merged their serverless microservices into one process and cut costs 90% — and the internet lost its mind.",
+    "difficulty": "intermediate",
+    "tags": ["microservices", "monolith", "cost", "architecture"],
+    "published": true,
+    "problem": "Prime Video's video-quality monitoring service analyzes live streams for defects — frozen frames, sync issues, black screens. The team built it the fashionable way: a **serverless microservices pipeline**. Step Functions orchestrated the workflow; one Lambda-based service split video into frames, wrote them to S3; another service fetched those frames and ran defect detectors; results flowed onward. Textbook decoupling.\n\nAt small scale it was fine. Scaled toward monitoring every Prime Video stream, it collapsed on cost and limits: Step Functions bills **per state transition**, and the design did multiple transitions per second of analyzed video. Worse, passing images between services meant every frame took a round trip through **S3** — written by the splitter, read by every detector. The 'communication tax' of the distributed design (orchestration transitions + S3 puts/gets on the hot data path) dominated the bill, and they hit account-level Step Functions scaling limits at ~5% of target load.\n\nNothing about the workload needed distribution: the steps were sequential, tightly coupled, and shared bulky intermediate data. The architecture imposed network hops on what was naturally a single process's job.",
+    "solution": "The team **merged the pipeline into one process**: frame splitting, detectors, and orchestration compiled into a single service, deployed on ECS/EC2. Frames now pass between steps as in-memory buffers instead of S3 objects; orchestration is ordinary function calls instead of billed state transitions. Scaling changed axis: instead of scaling each micro-step independently, they run many copies of the whole monolith and spread streams across them — coarse-grained horizontal scaling, which the workload happily accepts.\n\nInfrastructure cost dropped about **90%**, and the service could finally scale to all streams. Notably, they kept the same component boundaries in code — it's structured like services internally — they just deleted the network from between them.\n\nThe episode became famous because Amazon itself published it, and it says the quiet part: microservices buy independent scaling, deployment, and team autonomy at the price of network hops, serialization, and orchestration overhead. When the steps share fat data and always run together, that price buys nothing. Architecture is economics.",
+    "scale_context": {
+      "cost_reduction": "~90% infrastructure cost reduction",
+      "bottleneck": "Step Functions account limits hit at ~5% of expected load",
+      "hot_path_tax": "every video frame round-tripped through S3 between services",
+      "workload": "audio/video quality analysis across thousands of concurrent streams"
+    },
+    "lessons": [
+      "Count the communication tax: orchestration fees, serialization, and storage round-trips on the hot path.",
+      "Microservice boundaries that share bulky intermediate data are network hops pretending to be design.",
+      "You can keep modular code structure while deleting the network between modules.",
+      "Scale the whole unit horizontally when steps always run together — independent scaling was solving a problem they didn't have.",
+      "'Serverless-first' and 'microservices-always' are defaults, not laws; re-evaluate when the bill arrives."
+    ],
+    "components": ["client", "load_balancer", "app_server", "message_queue", "worker", "object_storage"],
+    "starter_graph": {
+      "nodes": [
+        { "id": "client", "type": "client", "label": "Stream Monitors", "config": {} },
+        { "id": "lb", "type": "load_balancer", "label": "Orchestrator", "config": {} },
+        { "id": "split", "type": "app_server", "label": "Frame Splitter λ", "config": { "instances": 2, "rps_per_instance": 500 } },
+        { "id": "detect1", "type": "app_server", "label": "Defect Detector λ 1", "config": { "instances": 2, "rps_per_instance": 500 } },
+        { "id": "detect2", "type": "app_server", "label": "Defect Detector λ 2", "config": { "instances": 2, "rps_per_instance": 500 } },
+        { "id": "s3", "type": "object_storage", "label": "S3 (frame hand-off)", "config": {} },
+        { "id": "queue", "type": "message_queue", "label": "Results Queue", "config": {} },
+        { "id": "worker", "type": "worker", "label": "Aggregator", "config": { "instances": 2, "consume_rps": 500 } }
+      ],
+      "edges": [
+        { "id": "e1", "source": "client", "target": "lb" },
+        { "id": "e2", "source": "lb", "target": "split" },
+        { "id": "e3", "source": "lb", "target": "detect1" },
+        { "id": "e4", "source": "lb", "target": "detect2" },
+        { "id": "e5", "source": "split", "target": "s3" },
+        { "id": "e6", "source": "detect1", "target": "queue" },
+        { "id": "e7", "source": "detect2", "target": "queue" },
+        { "id": "e8", "source": "queue", "target": "worker" },
+        { "id": "e9", "source": "worker", "target": "s3" }
+      ]
+    },
+    "starter_load_rps": 8000,
+    "simulate_prompt": "Push 8k RPS through the fine-grained pipeline and watch the tiny Lambda-sized services overload and the results queue lag — then consolidate: fewer, beefier app servers and enough aggregator instances."
+  }
+]
