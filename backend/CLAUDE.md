@@ -13,7 +13,11 @@ FastAPI + Python. Loaded when working in `backend/`.
   - `ai.py` → POST `/ai/explain`, POST `/ai/mentor`
   - `admin.py` → POST `/admin/ingest`
 - `engine/simulation.py` — the SimulationEngine. **Satyam writes this by hand.**
-- `services/` — Claude API client, Supabase client, scoring, ingestion logic.
+- `services/` — Claude API client, `auth.py` (bcrypt + JWT), scoring, ingestion.
+- `db/` — SQLAlchemy `base.py` + `session.py` (engine, `get_db`). `alembic/` for
+  migrations. `models/` — `user`, `design`, `challenge_attempt`.
+- `dependencies.py` — `get_current_user` (Bearer JWT → User). Ownership-scoped
+  routes MUST filter queries by the resolved `user_id` (no RLS backstop).
 - `data/` — `challenges.json`, `seed_urls.json`.
 
 ## Rules

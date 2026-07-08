@@ -3,11 +3,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from db.session import get_db
+from dependencies import get_current_user
 from models.user import User
 from schemas.auth import RegisterRequest, LoginRequest, TokenResponse
 from services.auth import hash_password, verify_password, create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.get("/me")
+def me(user: User = Depends(get_current_user)):
+    return {"id": user.id, "email": user.email, "created_at": user.created_at}
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)

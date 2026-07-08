@@ -1,24 +1,26 @@
 """POST /simulate — run a load simulation over a system graph.
 
-Thin route: validate input, hand to the SimulationEngine, return its result.
-The engine itself is written by hand (see engine/simulation.py).
+Thin route: Pydantic validates shape (≥1 client, ≤60 nodes, positive load),
+the engine does everything else. Engine ValueErrors become 422s so the
+frontend always gets an actionable message.
 """
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Any
+
+from engine.simulation import SimulationEngine
+from schemas.simulate import SimulateRequest, SimulateResponse
 
 router = APIRouter(prefix="/simulate", tags=["simulate"])
 
 
-class SimulateRequest(BaseModel):
-    graph: dict[str, Any]  # { nodes: [...], edges: [...] }
-    load_rps: int
-    failures: dict[str, str] | None = None  # node_id -> failure_mode
-
-
-@router.post("")
-def simulate(req: SimulateRequest):
-    # TODO(Satyam): instantiate SimulationEngine(req.graph) and run.
-    #   from engine.simulation import SimulationEngine
-    #   return SimulationEngine(req.graph).run(req.load_rps, req.failures)
-    raise HTTPException(status_code=501, detail="Simulation engine not yet implemented")
+@router.post("", response_model=SimulateResponse)
+def simulate(req: SimulateRequest) -> SimulateResponse:
+    try:
+        engine = SimulationEngine(req.graph.model_dump())
+        result = engine.run(
+            load_rps=req.load_rps,
+            failures=req.failures,
+            read_pct=req.workload.read_pct,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return SimulateResponse(**result)

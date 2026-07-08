@@ -4,7 +4,14 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-SECRET_KEY = os.environ["JWT_SECRET"]
+# Fail-soft in dev: generate an ephemeral secret (tokens die on restart) and
+# warn loudly. Production MUST set JWT_SECRET — see .env.example.
+SECRET_KEY = os.getenv("JWT_SECRET")
+if not SECRET_KEY:
+    import secrets
+    SECRET_KEY = secrets.token_hex(32)
+    print("WARNING: JWT_SECRET not set — using an ephemeral dev secret. "
+          "All tokens invalidate on restart. Set JWT_SECRET in production.")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
 
