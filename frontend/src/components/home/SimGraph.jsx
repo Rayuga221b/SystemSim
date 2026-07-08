@@ -2,7 +2,7 @@
 // Kept as a standalone component so Home.jsx stays readable.
 
 const edge = (delay = 0) => ({
-  stroke: "#6366F1", strokeOpacity: 0.4, strokeWidth: 1.5,
+  stroke: "#7C5CFF", strokeOpacity: 0.4, strokeWidth: 1.5,
   fill: "none", strokeDasharray: "5 4",
   animation: `flow-edge 2s linear ${delay}s infinite`,
 });
@@ -16,7 +16,7 @@ export default function SimGraph() {
     >
       <defs>
         <marker id="arr" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
-          <polygon points="0 0,6 3,0 6" fill="#6366F1" fillOpacity="0.45" />
+          <polygon points="0 0,6 3,0 6" fill="#7C5CFF" fillOpacity="0.45" />
         </marker>
       </defs>
 
@@ -29,22 +29,22 @@ export default function SimGraph() {
       <path d="M540,138 C555,138 568,100 568,100" style={edge(1.3)} markerEnd="url(#arr)" />
 
       {/* Nodes */}
-      <rect x="10"  y="83" width="110" height="34" rx="5" fill="#15151C" stroke="rgba(99,102,241,0.25)" strokeWidth="1.5" />
+      <rect x="10"  y="83" width="110" height="34" rx="5" fill="#15151C" stroke="rgba(124, 92, 255,0.25)" strokeWidth="1.5" />
       <text x="65"  y="104" textAnchor="middle" fill="#EDEDF2" fontSize="10" fontFamily="JetBrains Mono,monospace">Client</text>
 
-      <rect x="150" y="83" width="110" height="34" rx="5" fill="#15151C" stroke="rgba(99,102,241,0.25)" strokeWidth="1.5" />
+      <rect x="150" y="83" width="110" height="34" rx="5" fill="#15151C" stroke="rgba(124, 92, 255,0.25)" strokeWidth="1.5" />
       <text x="205" y="97"  textAnchor="middle" fill="#EDEDF2" fontSize="10" fontFamily="JetBrains Mono,monospace">API</text>
       <text x="205" y="110" textAnchor="middle" fill="#808098" fontSize="8"  fontFamily="JetBrains Mono,monospace">Gateway</text>
 
-      <rect x="290" y="83" width="110" height="34" rx="5" fill="#15151C" stroke="rgba(99,102,241,0.25)" strokeWidth="1.5" />
+      <rect x="290" y="83" width="110" height="34" rx="5" fill="#15151C" stroke="rgba(124, 92, 255,0.25)" strokeWidth="1.5" />
       <text x="345" y="97"  textAnchor="middle" fill="#EDEDF2" fontSize="10" fontFamily="JetBrains Mono,monospace">Load</text>
       <text x="345" y="110" textAnchor="middle" fill="#808098" fontSize="8"  fontFamily="JetBrains Mono,monospace">Balancer</text>
 
-      <rect x="430" y="44"  width="110" height="34" rx="5" fill="#15151C" stroke="rgba(99,102,241,0.2)" strokeWidth="1.5" />
+      <rect x="430" y="44"  width="110" height="34" rx="5" fill="#15151C" stroke="rgba(124, 92, 255,0.2)" strokeWidth="1.5" />
       <text x="485" y="58"  textAnchor="middle" fill="#EDEDF2" fontSize="10" fontFamily="JetBrains Mono,monospace">App Server</text>
       <text x="485" y="71"  textAnchor="middle" fill="#808098" fontSize="8"  fontFamily="JetBrains Mono,monospace">instance 1</text>
 
-      <rect x="430" y="122" width="110" height="34" rx="5" fill="#15151C" stroke="rgba(99,102,241,0.2)" strokeWidth="1.5" />
+      <rect x="430" y="122" width="110" height="34" rx="5" fill="#15151C" stroke="rgba(124, 92, 255,0.2)" strokeWidth="1.5" />
       <text x="485" y="136" textAnchor="middle" fill="#EDEDF2" fontSize="10" fontFamily="JetBrains Mono,monospace">App Server</text>
       <text x="485" y="149" textAnchor="middle" fill="#808098" fontSize="8"  fontFamily="JetBrains Mono,monospace">instance 2</text>
 

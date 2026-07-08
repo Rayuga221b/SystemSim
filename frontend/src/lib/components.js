@@ -13,8 +13,8 @@ import {
 
 export const CATEGORIES = [
   { id: "ingress", label: "Ingress",  color: "#38BDF8" }, // sky-400
-  { id: "compute", label: "Compute",  color: "#818CF8" }, // indigo-400
-  { id: "storage", label: "Storage",  color: "#34D399" }, // emerald-400
+  { id: "compute", label: "Compute",  color: "#9B85FF" }, // violet-400 (brand accent)
+  { id: "storage", label: "Storage",  color: "#34E2A1" }, // mint (2nd accent — see DESIGN.md)
   { id: "async",   label: "Async",    color: "#FB923C" }, // orange-400
 ];
 

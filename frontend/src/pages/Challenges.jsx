@@ -4,9 +4,13 @@
 // comes from the spine, zone headers, and alternating row weight.
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Clock, RefreshCw } from "lucide-react";
+import { ArrowRight, Clock, RefreshCw, CheckCircle2 } from "lucide-react";
 import { api } from "@/api/client";
+import { useStore } from "@/store";
 import { DIFFICULTIES } from "@/data/constants";
+import PageGlow from "@/components/ui/PageGlow";
+
+const SOLVED_THRESHOLD = 70;
 
 const EST_TIME = { Beginner: "~25 min", Intermediate: "~40 min", Advanced: "~55 min" };
 
@@ -43,19 +47,23 @@ const ZONE_ORDER = ["Beginner", "Intermediate", "Advanced"];
 
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
-function TrackItem({ c, step, zone, emphasized }) {
+function TrackItem({ c, step, zone, emphasized, bestScore }) {
+  const solved = bestScore != null && bestScore >= SOLVED_THRESHOLD;
+  const attempted = bestScore != null;
   return (
     <Link
       to={`/challenges/${c.slug}`}
       className="group relative block pl-14 pr-4 py-5 rounded-xl hover:bg-elevated/35 transition-colors duration-150"
     >
-      {/* Step marker on the rail */}
+      {/* Step marker on the rail — swaps to a checkmark once solved */}
       <span
         className={`absolute left-2.5 top-5 w-8 h-8 rounded-full bg-base border-2 flex items-center justify-center
-                    font-mono text-[11px] transition-colors duration-150 ${zone.marker}`}
+                    font-mono text-[11px] transition-colors duration-150 ${
+                      solved ? "border-emerald-500/60 text-emerald-400" : zone.marker
+                    }`}
         aria-hidden
       >
-        {String(step).padStart(2, "0")}
+        {solved ? <CheckCircle2 size={15} /> : String(step).padStart(2, "0")}
       </span>
 
       <div className="flex items-start justify-between gap-4">
@@ -66,9 +74,21 @@ function TrackItem({ c, step, zone, emphasized }) {
         >
           {c.title}
         </h3>
-        <span className="text-sm text-muted/40 group-hover:text-indigo-400 transition-colors duration-150 flex items-center gap-1.5 shrink-0 font-medium mt-0.5">
-          Start
-          <ArrowRight size={12} className="transition-transform duration-150 group-hover:translate-x-0.5" />
+        <span className="flex items-center gap-3 shrink-0 mt-0.5">
+          {attempted && (
+            <span
+              className={`font-mono text-[11px] tabular-nums ${
+                solved ? "text-emerald-400" : bestScore >= 50 ? "text-amber-400" : "text-red-400"
+              }`}
+              title={`Best score: ${bestScore}/100`}
+            >
+              {bestScore}<span className="text-muted/50">/100</span>
+            </span>
+          )}
+          <span className="text-sm text-muted/40 group-hover:text-indigo-400 transition-colors duration-150 flex items-center gap-1.5 font-medium">
+            {solved ? "Retry" : attempted ? "Continue" : "Start"}
+            <ArrowRight size={12} className="transition-transform duration-150 group-hover:translate-x-0.5" />
+          </span>
         </span>
       </div>
 
@@ -99,6 +119,8 @@ export default function Challenges() {
   const [active, setActive] = useState("All");
   const [challenges, setChallenges] = useState(null); // null = loading
   const [error, setError] = useState(null);
+  const user = useStore((s) => s.user);
+  const [attempts, setAttempts] = useState(null); // best score per slug, once loaded
 
   const load = () => {
     setError(null);
@@ -108,6 +130,21 @@ export default function Challenges() {
       .catch((e) => setError(e.message));
   };
   useEffect(load, []);
+
+  // Progress: best score per challenge, so the track shows what's already solved.
+  useEffect(() => {
+    if (!user) { setAttempts(null); return; }
+    api.myAttempts()
+      .then((data) => setAttempts(data.attempts || data))
+      .catch(() => setAttempts([]));
+  }, [user]);
+
+  const bestBySlug = new Map();
+  (attempts || []).forEach((a) => {
+    const prev = bestBySlug.get(a.challenge_slug) ?? -1;
+    if ((a.score ?? 0) > prev) bestBySlug.set(a.challenge_slug, a.score ?? 0);
+  });
+  const solvedCount = [...bestBySlug.values()].filter((s) => s >= SOLVED_THRESHOLD).length;
 
   const items = (challenges || []).map((c) => ({ ...c, difficulty: cap(c.difficulty) }));
   const filtered = active === "All" ? items : items.filter((c) => c.difficulty === active);
@@ -125,8 +162,12 @@ export default function Challenges() {
     .filter((z) => z.list.length > 0);
 
   return (
-    <div className="bg-base min-h-screen">
-      <div className="max-w-4xl mx-auto px-6">
+    <div className="relative bg-base min-h-screen">
+      <PageGlow blobs={[
+        { x: "18%", y: "0%",  w: "55%", h: "65%", color: "rgba(124, 92, 255,0.16)" },
+        { x: "88%", y: "6%",  w: "40%", h: "50%", color: "rgba(251,191,36,0.08)" },
+      ]} />
+      <div className="relative z-10 max-w-4xl mx-auto px-6">
 
         {/* Header */}
         <div className="py-16 sm:py-20 border-b border-white/[0.05]">
@@ -135,7 +176,7 @@ export default function Challenges() {
           </p>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
             <div>
-              <h1 className="font-display font-semibold text-4xl sm:text-5xl text-ink mb-3">
+              <h1 className="font-display font-semibold text-4xl sm:text-5xl mb-3 bg-gradient-to-r from-white via-white to-indigo-300 bg-clip-text text-transparent">
                 Challenges
               </h1>
               <p className="text-muted text-[0.9375rem] max-w-[52ch] leading-relaxed">
@@ -143,6 +184,17 @@ export default function Challenges() {
               </p>
             </div>
             <div className="flex items-center gap-5 shrink-0">
+              {user ? (
+                <>
+                  <div className="text-right">
+                    <p className="font-display text-3xl text-emerald-400 font-bold leading-none mb-1.5">
+                      {solvedCount}<span className="text-muted text-lg">/{items.length || 0}</span>
+                    </p>
+                    <p className="font-mono text-[10px] text-muted/50 uppercase tracking-wider">Solved</p>
+                  </div>
+                  <div className="w-px h-9 bg-white/[0.06]" />
+                </>
+              ) : null}
               <div className="text-right">
                 <p className="font-display text-3xl text-ink font-bold leading-none mb-1.5">{items.length || "—"}</p>
                 <p className="font-mono text-[10px] text-muted/50 uppercase tracking-wider">Stops on the track</p>
@@ -154,6 +206,12 @@ export default function Challenges() {
               </div>
             </div>
           </div>
+          {!user && (
+            <p className="mt-5 text-[12.5px] text-muted/70">
+              <Link to="/login" className="text-indigo-300 hover:text-indigo-200 font-medium">Sign in</Link>
+              {" "}to track which challenges you've solved.
+            </p>
+          )}
         </div>
 
         {/* Filters */}
@@ -233,6 +291,7 @@ export default function Challenges() {
                         step={stepOf.get(c.slug)}
                         zone={zone}
                         emphasized={i === 0}
+                        bestScore={bestBySlug.has(c.slug) ? bestBySlug.get(c.slug) : null}
                       />
                     ))}
                   </div>

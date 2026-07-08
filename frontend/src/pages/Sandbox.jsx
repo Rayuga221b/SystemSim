@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ReactFlowProvider } from "reactflow";
-import { PanelLeftClose, PanelLeftOpen, MousePointerClick, BarChart3 } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, MousePointerClick, BarChart3, X } from "lucide-react";
 import { useStore } from "@/store";
+import { PRESETS } from "@/lib/presets";
 import CanvasArea from "@/components/canvas/CanvasArea";
 import SimBar from "@/components/canvas/SimBar";
 import Palette from "@/components/sidebar/Palette";
@@ -27,6 +28,17 @@ export default function Sandbox() {
   const setSaveModalOpen = useStore((s) => s.setSaveModalOpen);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
+
+  // Nudge to save once the first simulation succeeds — dismissible, shown once
+  // per session so it never nags on every re-run.
+  const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
+  const showSaveNudge = !!simResult && !saveNudgeDismissed;
+
+  const loadPreset = (preset) => {
+    loadGraph(preset.graph);
+    if (preset.load_rps) setLoadRps(preset.load_rps);
+    clearSimResult();
+  };
 
   // Right panel tab: follows what the user is doing.
   const [tab, setTab] = useState("inspect");
@@ -74,16 +86,56 @@ export default function Sandbox() {
 
           {nodes.length === 0 && (
             <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none">
-              <div className="text-center max-w-xs">
+              <div className="text-center max-w-sm px-6">
                 <MousePointerClick size={20} className="mx-auto mb-3 text-muted/60" aria-hidden />
                 <p className="text-[13.5px] text-muted leading-relaxed">
                   Drag components from the palette, connect them left to right,
                   then hit <span className="text-ink font-medium">Simulate</span>.
                 </p>
-                <p className="mt-2 font-mono text-[11px] text-muted/60">
-                  or load an example from the toolbar ↑
+                <p className="mt-4 font-mono text-[10.5px] text-muted/50 uppercase tracking-wider">
+                  or start from an example
                 </p>
+                <div className="flex flex-col gap-2 mt-3 pointer-events-auto">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => loadPreset(p)}
+                      className="text-left rounded-lg border border-white/[0.08] bg-surface/90 backdrop-blur-sm px-3.5 py-2.5
+                                 hover:border-indigo-500/35 hover:bg-elevated transition-colors duration-150"
+                    >
+                      <span className="block text-[12.5px] font-medium text-ink">{p.label}</span>
+                      <span className="block text-[11px] text-muted/70 mt-0.5 leading-snug">{p.hint}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
+            </div>
+          )}
+
+          {showSaveNudge && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3
+                             bg-surface/95 backdrop-blur border border-indigo-500/25 rounded-full pl-4 pr-2 py-2
+                             shadow-lg shadow-black/30">
+              <span className="text-[12.5px] text-ink/90">
+                Nice — this design works.{" "}
+                <span className="text-muted">Save it before you lose it.</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => { setSaveModalOpen(true); setSaveNudgeDismissed(true); }}
+                className="text-[12px] font-semibold text-indigo-300 hover:text-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-500/10 transition-colors"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaveNudgeDismissed(true)}
+                aria-label="Dismiss"
+                className="text-muted/50 hover:text-ink p-1 rounded-full hover:bg-white/[0.06] transition-colors"
+              >
+                <X size={13} />
+              </button>
             </div>
           )}
 

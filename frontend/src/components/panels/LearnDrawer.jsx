@@ -59,7 +59,7 @@ export default function LearnDrawer() {
             {concept.what}
           </p>
 
-          <Section icon={Activity} title="Under load" color="#818CF8">
+          <Section icon={Activity} title="Under load" color="#9B85FF">
             <p className="text-[12.5px] text-muted leading-relaxed">{concept.how}</p>
           </Section>
 
@@ -78,7 +78,7 @@ export default function LearnDrawer() {
           </Section>
 
           {/* The one paragraph worth memorizing — boxed so it reads as a quote */}
-          <Section icon={MessageSquareQuote} title="Saying it in an interview" color="#818CF8">
+          <Section icon={MessageSquareQuote} title="Saying it in an interview" color="#9B85FF">
             <blockquote className="rounded-lg border-l-2 border-indigo-500/70 bg-indigo-500/[0.07] px-3.5 py-3">
               <p className="font-mono text-[9.5px] text-indigo-300 tracking-[0.14em] uppercase mb-1.5">★ Say this</p>
               <p className="text-[12.5px] text-ink leading-relaxed">{concept.interview}</p>

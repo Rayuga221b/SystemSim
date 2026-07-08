@@ -277,7 +277,7 @@ export default function Home() {
           style={{
             background: [
               "linear-gradient(to right, #09090E 0%, #0B0B1C 12%, #0F0F2A 50%, #0B0B1C 88%, #09090E 100%)",
-              "radial-gradient(ellipse 55% 100% at 50% 50%, rgba(99,102,241,0.16) 0%, transparent 65%)",
+              "radial-gradient(ellipse 55% 100% at 50% 50%, rgba(124, 92, 255,0.16) 0%, transparent 65%)",
             ].join(", "),
           }}
         />
@@ -318,7 +318,7 @@ export default function Home() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 70%)",
+            background: "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(124, 92, 255,0.07) 0%, transparent 70%)",
           }}
         />
         {/* max-w-5xl gives the carousel room to breathe on large screens */}
@@ -418,7 +418,9 @@ export default function Home() {
                   <span className="bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 rounded-md p-1.5 flex items-center justify-center">
                     <LayoutDashboard size={14} />
                   </span>
-                  <span className="font-semibold text-ink text-base">Sandbox</span>
+                  {/* text-[1rem] not text-base — see Footer.jsx comment: the
+                      "base" theme color collides with text-base's font-size utility. */}
+                  <span className="font-semibold text-ink text-[1rem]">Sandbox</span>
                 </div>
                 <p className="text-muted text-sm leading-relaxed max-w-[40ch]">
                   Free canvas. 14 drag-and-drop components. Wire them up, set load, and simulate. Bottlenecks surface immediately.
@@ -506,8 +508,8 @@ export default function Home() {
           className="pointer-events-none absolute inset-0"
           style={{
             background: [
-              "radial-gradient(ellipse 65% 75% at 50% 52%, rgba(99,102,241,0.24) 0%, rgba(139,92,246,0.12) 40%, transparent 70%)",
-              "radial-gradient(ellipse 35% 45% at 50% 48%, rgba(99,102,241,0.10) 0%, transparent 55%)",
+              "radial-gradient(ellipse 65% 75% at 50% 52%, rgba(124, 92, 255,0.24) 0%, rgba(139,92,246,0.12) 40%, transparent 70%)",
+              "radial-gradient(ellipse 35% 45% at 50% 48%, rgba(124, 92, 255,0.10) 0%, transparent 55%)",
             ].join(", "),
           }}
         />

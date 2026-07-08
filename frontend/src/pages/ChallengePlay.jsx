@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ReactFlowProvider } from "reactflow";
+import { useReducedMotion } from "framer-motion";
 import {
-  ArrowLeft, ClipboardList, Blocks, Lightbulb, Loader2, Send, Eye,
-  CheckCircle2, AlertTriangle, XCircle, MousePointerClick, BarChart3, RotateCcw,
+  ArrowLeft, ClipboardList, Blocks, Lightbulb, Loader2, Send, Eye, Target,
+  CheckCircle2, AlertTriangle, XCircle, MousePointerClick, BarChart3, RotateCcw, Trophy,
 } from "lucide-react";
 import { useStore } from "@/store";
 import { api } from "@/api/client";
@@ -31,6 +32,7 @@ export default function ChallengePlay() {
   const [attempt, setAttempt] = useState(null); // {score, feedback}
   const [submitError, setSubmitError] = useState(null);
 
+  const user = useStore((s) => s.user);
   const nodes = useStore((s) => s.nodes);
   const selectedNodeId = useStore((s) => s.selectedNodeId);
   const simResult = useStore((s) => s.simResult);
@@ -48,6 +50,20 @@ export default function ChallengePlay() {
   const [rightTab, setRightTab] = useState("inspect");
   useEffect(() => { if (simResult) setRightTab("results"); }, [simResult]);
   useEffect(() => { if (selectedNodeId) setRightTab("inspect"); }, [selectedNodeId]);
+
+  // Best score before this session's attempts — captured once on load so a
+  // "New best!" badge can compare against it after a fresh submission.
+  const [priorBest, setPriorBest] = useState(null);
+  useEffect(() => {
+    if (!user) { setPriorBest(null); return; }
+    api.listMyAttempts(slug)
+      .then((data) => {
+        const list = data.attempts || data;
+        setPriorBest(list.length ? Math.max(...list.map((a) => a.score ?? 0)) : null);
+      })
+      .catch(() => setPriorBest(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, user]);
 
   // Load the challenge; start from a clean canvas tuned to its traffic.
   useEffect(() => {
@@ -133,6 +149,7 @@ export default function ChallengePlay() {
                   onRetry={() => setAttempt(null)}
                   onShowSolution={showSolution}
                   solutionNote={solutionNote}
+                  isNewBest={!!user && (priorBest == null || attempt.score > priorBest)}
                 />
               ) : (
                 <div className="px-4 py-4">
@@ -145,11 +162,15 @@ export default function ChallengePlay() {
                       {cap(challenge.difficulty)}
                     </span>
                   </div>
-                  <p className="text-[12px] text-muted leading-relaxed mb-4">{challenge.description}</p>
-
-                  {/* Traffic profile */}
-                  <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-3 py-2.5 mb-4">
-                    <h3 className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-indigo-300/80 mb-1.5">Traffic profile</h3>
+                  {/* Problem / Solution — same two-card language as a case
+                      study's Problem → Solution read (CaseStudyDetail.jsx):
+                      what you're up against, then what a solution has to
+                      satisfy. Red label vs. mint label, side by side in spirit
+                      even though this rail is too narrow to run them side by
+                      side literally. */}
+                  <div className="rounded-lg border border-red-500/25 bg-red-500/[0.05] px-3 py-2.5 mb-3">
+                    <h3 className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-red-400/90 mb-1.5">The problem</h3>
+                    <p className="text-[12px] text-ink/85 leading-relaxed mb-2.5">{challenge.description}</p>
                     <p className="font-mono text-[11px] text-ink/90 tabular-nums leading-relaxed">
                       {fmt(challenge.load_rps)} rps · {challenge.workload?.read_pct ?? 80}% reads
                       {challenge.latency_budget_ms && <> · ≤{challenge.latency_budget_ms}ms</>}
@@ -157,16 +178,18 @@ export default function ChallengePlay() {
                     <p className="text-[10.5px] text-muted mt-1">The toolbar load is pre-set — your design is scored under this traffic.</p>
                   </div>
 
-                  {/* Requirements */}
-                  <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted/70 mb-2">Requirements</h3>
-                  <ul className="flex flex-col gap-1.5 mb-5">
-                    {(challenge.requirements || []).map((r, i) => (
-                      <li key={i} className="flex gap-2 text-[12px] text-ink/85 leading-relaxed">
-                        <span className="font-mono text-[10px] text-indigo-400/80 mt-[3px] shrink-0">{String(i + 1).padStart(2, "0")}</span>
-                        {r}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="rounded-lg border border-mint/25 bg-mint/[0.05] px-3 py-2.5 mb-5">
+                    <h3 className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-mint/90 mb-1.5">The solution</h3>
+                    <p className="text-[10.5px] text-muted mb-2">A design here needs to:</p>
+                    <ul className="flex flex-col gap-1.5">
+                      {(challenge.requirements || []).map((r, i) => (
+                        <li key={i} className="flex gap-2 text-[12px] text-ink/85 leading-relaxed">
+                          <Target size={11} className="text-mint/80 mt-[3px] shrink-0" aria-hidden />
+                          {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
                   {/* Hints */}
                   {challenge.hints?.length > 0 && (
@@ -295,10 +318,30 @@ export default function ChallengePlay() {
   );
 }
 
-function AttemptResult({ attempt, onRetry, onShowSolution, solutionNote }) {
+function AttemptResult({ attempt, onRetry, onShowSolution, solutionNote, isNewBest }) {
   const score = attempt.score ?? 0;
   const [confirmingSolution, setConfirmingSolution] = useState(false);
   const [loadingSolution, setLoadingSolution] = useState(false);
+  const shouldReduce = useReducedMotion();
+
+  // Count up from 0 instead of flashing the number straight in — a small,
+  // deliberate beat that makes the score feel earned rather than printed.
+  const [displayScore, setDisplayScore] = useState(shouldReduce ? score : 0);
+  useEffect(() => {
+    if (shouldReduce) { setDisplayScore(score); return; }
+    let raf;
+    const duration = 700;
+    const started = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - started) / duration);
+      const eased = 1 - (1 - t) ** 3; // ease-out cubic
+      setDisplayScore(Math.round(eased * score));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [score, shouldReduce]);
+
   const tone = score >= 80 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400";
   const groups = [
     { key: "good",    title: "What works",   icon: CheckCircle2,  cls: "text-emerald-400" },
@@ -319,8 +362,13 @@ function AttemptResult({ attempt, onRetry, onShowSolution, solutionNote }) {
     <div className="px-4 py-5">
       <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted/70 mb-1">Score</p>
       <p className={`font-display text-[3rem] font-bold leading-none tabular-nums ${tone}`}>
-        {score}<span className="text-[15px] text-muted font-sans font-normal">/100</span>
+        {displayScore}<span className="text-[15px] text-muted font-sans font-normal">/100</span>
       </p>
+      {isNewBest && (
+        <span className="inline-flex items-center gap-1.5 mt-3 text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/25 rounded-full px-2.5 py-1">
+          <Trophy size={11} aria-hidden /> New best!
+        </span>
+      )}
 
       <div className="flex flex-col gap-4 mt-5">
         {groups.map(({ key, title, icon: Icon, cls }) => {

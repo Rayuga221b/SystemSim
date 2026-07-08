@@ -1,16 +1,23 @@
 // The Library: core-concept chapters (the method) + the component library
 // (the vocabulary). Theory always links back to the playground — read it,
 // then go break something with it.
+//
+// Core concepts render as a compact, all-visible-at-once grid — clicking a
+// card opens its content in a centered modal (blurred backdrop, gradient
+// panel) instead of pushing the page into a long inline accordion.
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  ChevronDown, CheckCircle2, Clock, ArrowRight, BookOpen, Blocks, PenTool, Mic,
+  CheckCircle2, Clock, ArrowRight, ChevronLeft, ChevronRight, X,
+  BookOpen, Blocks, PenTool, Mic, Compass, Activity, Scale, TrendingUp,
 } from "lucide-react";
 import { CHAPTERS } from "@/data/chapters";
 import { CONCEPTS } from "@/data/concepts";
 import { COMPONENTS, CATEGORIES } from "@/lib/components";
 import { useStore } from "@/store";
 import Prose from "@/components/ui/Prose";
+import PageGlow from "@/components/ui/PageGlow";
 import LearnDrawer from "@/components/panels/LearnDrawer";
 
 const READ_KEY = "systemsim_read_chapters";
@@ -21,6 +28,142 @@ function loadRead() {
   } catch {
     return new Set();
   }
+}
+
+// One icon + accent color per chapter — gives the grid visual variety instead
+// of four identical rows, and doubles as the modal's gradient tint.
+const CHAPTER_META = {
+  "how-to-approach":      { icon: Compass,    color: "#9B85FF" },
+  "reading-a-simulation": { icon: Activity,   color: "#38BDF8" },
+  "tradeoff-profile":     { icon: Scale,      color: "#A78BFA" },
+  "scaling-playbook":     { icon: TrendingUp, color: "#FBBF24" },
+};
+
+const EASE_EXPO = [0.16, 1, 0.3, 1];
+
+function ChapterModal({ chapter, meta, index, total, onClose, onNav }) {
+  const shouldReduce = useReducedMotion();
+  const Icon = meta.icon;
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight" && index < total - 1) onNav(1);
+      if (e.key === "ArrowLeft" && index > 0) onNav(-1);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose, onNav, index, total]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduce ? 0 : 0.2 }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label={chapter.title}
+        className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/60"
+        style={{ background: `linear-gradient(160deg, ${meta.color}2e 0%, #0c0a1a 40%, #050508 100%)` }}
+        initial={{ opacity: 0, scale: shouldReduce ? 1 : 0.92, y: shouldReduce ? 0 : 18 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: shouldReduce ? 1 : 0.95, y: shouldReduce ? 0 : 10 }}
+        transition={{ duration: shouldReduce ? 0 : 0.32, ease: EASE_EXPO }}
+      >
+        {/* Header */}
+        <div
+          className="sticky top-0 z-10 flex items-center gap-3 px-6 sm:px-7 py-5 border-b border-white/[0.08] backdrop-blur-md"
+          style={{ background: `${meta.color}14` }}
+        >
+          <span className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${meta.color}26` }}>
+            <Icon size={18} style={{ color: meta.color }} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] mb-0.5" style={{ color: meta.color }}>
+              Chapter {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
+            </p>
+            <h2 className="font-display font-semibold text-ink text-[1.1rem] leading-tight truncate">{chapter.title}</h2>
+          </div>
+          <span className="hidden sm:flex items-center gap-1.5 font-mono text-[10.5px] text-muted/60 shrink-0">
+            <Clock size={11} aria-hidden /> {chapter.minutes} min
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-1 p-1.5 -m-1.5 rounded text-muted hover:text-ink transition-colors shrink-0"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 sm:px-7 py-6">
+          {chapter.sections.map((s, si) => (
+            <div key={s.heading} className="mb-7 last:mb-0 pb-7 last:pb-0 border-b border-white/[0.06] last:border-0">
+              <h3 className="flex items-baseline gap-2.5 font-display font-semibold text-ink text-[0.95rem] mb-2.5">
+                <span className="font-mono text-[11px]" style={{ color: meta.color }} aria-hidden>
+                  {String(si + 1).padStart(2, "0")}
+                </span>
+                {s.heading}
+              </h3>
+              <Prose
+                text={s.body}
+                className="!text-[0.875rem] [&_strong]:text-indigo-200 [&_strong]:font-medium"
+              />
+              {s.takeaway && (
+                <aside
+                  className="mt-4 rounded-lg border-l-2 px-4 py-3"
+                  style={{ borderColor: `${meta.color}b3`, backgroundColor: `${meta.color}12` }}
+                >
+                  <p className="font-mono text-[10px] tracking-[0.14em] uppercase mb-1" style={{ color: meta.color }}>
+                    ★ Remember
+                  </p>
+                  <p className="font-read text-[0.9rem] text-ink leading-relaxed">{s.takeaway}</p>
+                </aside>
+              )}
+            </div>
+          ))}
+
+          <div className="flex items-center justify-between gap-3 mt-1">
+            <Link
+              to="/sandbox"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium hover:opacity-80 transition-opacity"
+              style={{ color: meta.color }}
+            >
+              Apply it in the sandbox <ArrowRight size={13} />
+            </Link>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => onNav(-1)}
+                disabled={index === 0}
+                aria-label="Previous chapter"
+                className="p-1.5 rounded-lg border border-white/[0.08] text-muted hover:text-ink hover:border-white/[0.16] disabled:opacity-25 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onNav(1)}
+                disabled={index === total - 1}
+                aria-label="Next chapter"
+                className="p-1.5 rounded-lg border border-white/[0.08] text-muted hover:text-ink hover:border-white/[0.16] disabled:opacity-25 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 }
 
 export default function Learn() {
@@ -37,8 +180,12 @@ export default function Learn() {
   }, [openSlug, read]);
 
   return (
-    <div className="bg-base min-h-screen">
-      <div className="max-w-4xl mx-auto px-6">
+    <div className="relative bg-base min-h-screen">
+      <PageGlow blobs={[
+        { x: "18%", y: "0%",  w: "55%", h: "65%", color: "rgba(124, 92, 255,0.16)" },
+        { x: "88%", y: "8%",  w: "42%", h: "52%", color: "rgba(56,189,248,0.09)" },
+      ]} />
+      <div className="relative z-10 max-w-4xl mx-auto px-6">
 
         {/* Header */}
         <div className="py-16 sm:py-20 border-b border-white/[0.05]">
@@ -47,7 +194,7 @@ export default function Learn() {
           </p>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
             <div>
-              <h1 className="font-display font-semibold text-4xl sm:text-5xl text-ink mb-3">
+              <h1 className="font-display font-semibold text-4xl sm:text-5xl mb-3 bg-gradient-to-r from-white via-white to-indigo-300 bg-clip-text text-transparent">
                 Learn
               </h1>
               <p className="text-muted text-[0.9375rem] max-w-[52ch] leading-relaxed">
@@ -79,91 +226,86 @@ export default function Learn() {
             Four short chapters covering the method behind every good design — and behind every number this simulator shows you.
           </p>
 
-          <div className="flex flex-col gap-3">
+          {/* Compact grid — all four chapters visible without scrolling.
+              Click opens the full content in a modal instead of expanding inline. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {CHAPTERS.map((ch, i) => {
-              const isOpen = openSlug === ch.slug;
+              const meta = CHAPTER_META[ch.slug];
+              const Icon = meta.icon;
               const isRead = read.has(ch.slug);
               return (
-                <article
+                <button
                   key={ch.slug}
-                  className={`relative bg-surface border rounded-xl transition-colors duration-200 ${
-                    isOpen ? "border-indigo-500/30" : "border-white/[0.07] hover:border-white/[0.12]"
-                  }`}
+                  type="button"
+                  onClick={() => setOpenSlug(ch.slug)}
+                  className="group relative text-left rounded-xl border p-5 flex flex-col gap-3 overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+                  style={{
+                    borderColor: isRead ? `${meta.color}45` : "rgba(255,255,255,0.07)",
+                    background: `linear-gradient(155deg, ${meta.color}12 0%, transparent 65%)`,
+                  }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setOpenSlug(isOpen ? null : ch.slug)}
-                    aria-expanded={isOpen}
-                    className="w-full text-left p-6 flex items-start gap-4"
-                  >
-                    <span className="font-mono text-[11px] text-indigo-400/80 mt-1 shrink-0">
-                      {String(i + 1).padStart(2, "0")}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -top-8 -right-8 w-28 h-28 rounded-full blur-2xl opacity-0 group-hover:opacity-25 transition-opacity duration-300"
+                    style={{ background: meta.color }}
+                  />
+                  <span className="relative flex items-start justify-between">
+                    <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${meta.color}1f` }}>
+                      <Icon size={16} style={{ color: meta.color }} aria-hidden />
                     </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="flex items-center gap-2.5 flex-wrap">
-                        <span className="font-display font-semibold text-ink text-[1.05rem] leading-snug">
-                          {ch.title}
-                        </span>
-                        {isRead && (
-                          <CheckCircle2 size={14} className="text-emerald-400 shrink-0" aria-label="Read" />
-                        )}
+                    {isRead ? (
+                      <CheckCircle2 size={14} className="text-emerald-400 shrink-0" aria-label="Read" />
+                    ) : (
+                      <span className="font-mono text-[10px] text-muted/40 shrink-0 mt-1.5">
+                        {String(i + 1).padStart(2, "0")}
                       </span>
-                      <span className="block text-muted text-[0.875rem] leading-relaxed mt-1.5 max-w-[62ch]">
-                        {ch.summary}
-                      </span>
+                    )}
+                  </span>
+                  <span className="relative block flex-1">
+                    <span className="block font-display font-semibold text-ink text-[0.95rem] leading-snug">
+                      {ch.title}
                     </span>
-                    <span className="flex items-center gap-3 shrink-0 mt-1">
-                      <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted/45">
-                        <Clock size={10} aria-hidden /> {ch.minutes} min
-                      </span>
-                      <ChevronDown
-                        size={15}
-                        className={`text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                        aria-hidden
-                      />
+                    <span className="block text-muted text-[0.78rem] leading-relaxed mt-1.5 line-clamp-2">
+                      {ch.summary}
                     </span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="px-6 pb-6 pl-[3.25rem] border-t border-white/[0.05] pt-5">
-                      {ch.sections.map((s, si) => (
-                        <div
-                          key={s.heading}
-                          className="mb-7 last:mb-0 pb-7 last:pb-0 border-b border-white/[0.04] last:border-0"
-                        >
-                          <h3 className="flex items-baseline gap-2.5 font-display font-semibold text-ink text-[0.9375rem] mb-2.5">
-                            <span className="font-mono text-[11px] text-indigo-400/80" aria-hidden>
-                              {String(si + 1).padStart(2, "0")}
-                            </span>
-                            {s.heading}
-                          </h3>
-                          <Prose
-                            text={s.body}
-                            className="!text-[0.9rem] max-w-[60ch] [&_strong]:text-indigo-200 [&_strong]:font-medium"
-                          />
-                          {s.takeaway && (
-                            <aside className="mt-4 rounded-lg border-l-2 border-indigo-500/70 bg-indigo-500/[0.06] px-4 py-3 max-w-[60ch]">
-                              <p className="font-mono text-[10px] text-indigo-300 tracking-[0.14em] uppercase mb-1">
-                                ★ Remember
-                              </p>
-                              <p className="text-[13.5px] text-ink leading-relaxed">{s.takeaway}</p>
-                            </aside>
-                          )}
-                        </div>
-                      ))}
-                      <Link
-                        to="/sandbox"
-                        className="inline-flex items-center gap-1.5 mt-5 text-[13px] font-medium text-indigo-300 hover:text-indigo-200"
-                      >
-                        Apply it in the sandbox <ArrowRight size={13} />
-                      </Link>
-                    </div>
-                  )}
-                </article>
+                  </span>
+                  <span className="relative flex items-center justify-between pt-3 border-t border-white/[0.05]">
+                    <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted/50">
+                      <Clock size={10} aria-hidden /> {ch.minutes} min
+                    </span>
+                    <span
+                      className="text-[11.5px] font-medium flex items-center gap-1"
+                      style={{ color: meta.color }}
+                    >
+                      Read
+                      <ArrowRight size={11} className="transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />
+                    </span>
+                  </span>
+                </button>
               );
             })}
           </div>
         </section>
+
+        <AnimatePresence>
+          {openSlug && (() => {
+            const openIndex = CHAPTERS.findIndex((c) => c.slug === openSlug);
+            const chapter = CHAPTERS[openIndex];
+            return (
+              <ChapterModal
+                chapter={chapter}
+                meta={CHAPTER_META[openSlug]}
+                index={openIndex}
+                total={CHAPTERS.length}
+                onClose={() => setOpenSlug(null)}
+                onNav={(dir) => {
+                  const next = CHAPTERS[openIndex + dir];
+                  if (next) setOpenSlug(next.slug);
+                }}
+              />
+            );
+          })()}
+        </AnimatePresence>
 
         {/* Interview prep link-card */}
         <section className="pt-10">

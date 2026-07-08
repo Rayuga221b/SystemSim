@@ -8,11 +8,13 @@ import { COMPONENT_BY_TYPE, CATEGORY_COLOR, capacitySummary, fmt } from "@/lib/c
 import { FAILURE_MODES } from "@/lib/failures";
 
 // Status is never conveyed by color alone (a11y): each status pairs an icon.
+// "healthy" uses mint (the second brand accent, reserved for "healthy /
+// simulating" states only — see DESIGN.md "Visual rebrand" note).
 const STATUS = {
-  healthy:    { icon: CheckCircle2,  ring: "border-emerald-500/50", text: "text-emerald-400", label: "Healthy" },
-  warning:    { icon: AlertTriangle, ring: "border-amber-400/70",   text: "text-amber-400",   label: "Near capacity" },
-  overloaded: { icon: AlertOctagon,  ring: "border-red-500/80",     text: "text-red-400",     label: "Overloaded" },
-  failed:     { icon: XCircle,       ring: "border-red-600/80",     text: "text-red-500",     label: "Failed" },
+  healthy:    { icon: CheckCircle2,  ring: "border-mint/60",      text: "text-mint",        label: "Healthy" },
+  warning:    { icon: AlertTriangle, ring: "border-amber-400/70", text: "text-amber-400",   label: "Near capacity" },
+  overloaded: { icon: AlertOctagon,  ring: "border-red-500/80",   text: "text-red-400",     label: "Overloaded" },
+  failed:     { icon: XCircle,       ring: "border-red-600/80",   text: "text-red-500",     label: "Failed" },
 };
 
 function SystemNode({ id, data, selected }) {
@@ -28,10 +30,18 @@ function SystemNode({ id, data, selected }) {
   const StatusIcon = st?.icon;
   const util = metrics ? Math.min(metrics.utilization_pct, 100) : null;
 
+  // Idle nodes (no sim result yet, not selected) get a category-colored
+  // outline instead of a neutral border — you can tell what a node *is* at a
+  // glance before you ever hit Simulate. Once a status or selection exists,
+  // that takes over via the Tailwind classes below (inline style would win
+  // the cascade otherwise).
+  const idleOutline = !st && !selected ? { borderColor: `${color}80` } : undefined;
+
   return (
     <div
-      className={`group w-[178px] rounded-lg bg-surface border transition-colors duration-150
-        ${st ? st.ring : "border-white/[0.09]"}
+      style={idleOutline}
+      className={`group w-[178px] rounded-lg bg-surface border-2 transition-colors duration-150
+        ${st ? st.ring : ""}
         ${selected ? "shadow-indigo-ring border-indigo-500/60" : ""}
         ${status === "failed" ? "opacity-70" : ""}`}
     >
@@ -88,7 +98,7 @@ function SystemNode({ id, data, selected }) {
                 ? "bg-red-500"
                 : status === "warning"
                 ? "bg-amber-400"
-                : "bg-emerald-500/80"
+                : "bg-mint/80"
             }`}
             style={{ width: `${util}%` }}
           />

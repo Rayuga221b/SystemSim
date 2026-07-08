@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="SystemSim">
+  <path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="10" stroke-linecap="round"/>
+  <path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="86" cy="22" r="11" fill="#F3F5FA"/>
+  <circle cx="86" cy="98" r="11" fill="#F3F5FA"/>
+  <circle cx="46" cy="60" r="14" fill="#34E2A1"/>
+</svg>

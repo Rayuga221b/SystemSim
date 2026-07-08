@@ -15,8 +15,8 @@ function SystemEdge({ id, target, sourceX, sourceY, targetX, targetY, sourcePosi
   const stroke = stressed
     ? "rgba(239,68,68,0.75)"
     : selected
-    ? "rgba(129,140,248,0.9)"
-    : "rgba(99,102,241,0.45)";
+    ? "rgba(155, 133, 255,0.9)"
+    : "rgba(124, 92, 255,0.45)";
 
   return (
     <>

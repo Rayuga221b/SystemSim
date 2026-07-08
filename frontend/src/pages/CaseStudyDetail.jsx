@@ -106,7 +106,7 @@ export default function CaseStudyDetail() {
     );
   }
 
-  const color = BRAND_COLOR[cs.company] ?? "#6366F1";
+  const color = BRAND_COLOR[cs.company] ?? "#7C5CFF";
   const scale = Object.entries(cs.scale_context || {});
   const keyLesson = cs.lessons?.[0];
 
@@ -157,7 +157,7 @@ export default function CaseStudyDetail() {
             <h1 className="font-display font-semibold text-3xl sm:text-[2.5rem] leading-[1.15] tracking-[-0.02em] text-ink mb-4" style={{ textWrap: "balance" }}>
               {cs.title}
             </h1>
-            <blockquote className="border-l-2 pl-4 italic text-[0.9375rem] text-muted leading-relaxed max-w-[58ch]" style={{ borderColor: color + "70" }}>
+            <blockquote className="font-read border-l-2 pl-4 italic text-[1.0625rem] text-muted leading-relaxed max-w-[58ch]" style={{ borderColor: color + "70" }}>
               {cs.one_liner}
             </blockquote>
           </div>
@@ -193,7 +193,7 @@ export default function CaseStudyDetail() {
             {keyLesson && (
               <aside className="mt-6 rounded-lg border-l-2 border-indigo-500/70 bg-indigo-500/[0.06] px-4 py-3.5 max-w-[62ch]">
                 <p className="font-mono text-[10px] text-indigo-300 tracking-[0.14em] uppercase mb-1.5">★ Remember</p>
-                <p className="text-[0.9rem] text-ink leading-relaxed">{keyLesson}</p>
+                <p className="font-read text-[0.95rem] text-ink leading-relaxed">{keyLesson}</p>
               </aside>
             )}
 
@@ -247,7 +247,7 @@ export default function CaseStudyDetail() {
                 {cs.lessons.map((l, i) => (
                   <li key={i} className="flex gap-3.5 bg-surface border border-white/[0.06] rounded-lg px-4 py-3">
                     <span className="font-mono text-[11px] text-indigo-400 mt-0.5 shrink-0">{String(i + 1).padStart(2, "0")}</span>
-                    <span className="text-[0.875rem] text-ink/90 leading-relaxed">{l}</span>
+                    <span className="font-read text-[0.9375rem] text-ink/90 leading-relaxed">{l}</span>
                   </li>
                 ))}
               </ol>
@@ -268,7 +268,7 @@ export default function CaseStudyDetail() {
             {answer && (
               <div className="mb-4 rounded-xl border border-white/[0.07] bg-surface p-5">
                 <p className="text-[12.5px] text-muted mb-3 italic">"{answer.q}"</p>
-                <p className="text-[0.875rem] text-ink/85 leading-relaxed whitespace-pre-wrap">{answer.a}</p>
+                <p className="font-read text-[0.9375rem] text-ink/85 leading-relaxed whitespace-pre-wrap">{answer.a}</p>
               </div>
             )}
             {mentorError && <p className="mb-3 text-[12.5px] text-muted">{mentorError}</p>}
