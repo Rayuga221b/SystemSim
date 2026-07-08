@@ -8,12 +8,6 @@ const GithubIcon = ({ size = 14 }) => (
   </svg>
 );
 
-const TwitterIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-  </svg>
-);
-
 // ─── Navigation groups ────────────────────────────────────────────────────────
 
 const NAV_GROUPS = [
@@ -29,26 +23,25 @@ const NAV_GROUPS = [
   {
     title: "Learn",
     links: [
-      { label: "System Design Primer",   href: "#" },
-      { label: "Architecture Patterns",  href: "#" },
-      { label: "Interview Prep Guide",   href: "#" },
-      { label: "Distributed Systems 101",href: "#" },
+      { label: "Core Concepts",     to: "/learn"         },
+      { label: "Component Library", to: "/learn#components" },
+      { label: "Interview Prep",    to: "/interview"     },
+      { label: "Real Incidents",    to: "/case-studies"  },
+      { label: "Scored Practice",   to: "/challenges"    },
     ],
   },
   {
     title: "Project",
     links: [
-      { label: "About",     href: "#" },
-      { label: "GitHub",    href: "https://github.com" },
-      { label: "Roadmap",   href: "#" },
-      { label: "Changelog", href: "#" },
+      { label: "About",   to: "/" },
+      { label: "GitHub",  href: "https://github.com" },
+      { label: "Contact", href: "mailto:hello@systemsim.dev" },
     ],
   },
 ];
 
 const SOCIAL = [
   { icon: GithubIcon,  label: "GitHub",  href: "https://github.com"         },
-  { icon: TwitterIcon, label: "Twitter", href: "#"                           },
   { icon: Mail,        label: "Email",   href: "mailto:hello@systemsim.dev"  },
 ];
 

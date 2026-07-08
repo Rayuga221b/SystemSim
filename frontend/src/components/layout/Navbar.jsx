@@ -2,11 +2,14 @@ import { useState, useEffect } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useStore } from "@/store";
 
 const LINKS = [
   { to: "/sandbox",      label: "Sandbox"      },
   { to: "/challenges",   label: "Challenges"   },
   { to: "/case-studies", label: "Case Studies" },
+  { to: "/learn",        label: "Learn"        },
+  { to: "/interview",    label: "Interview"    },
   { to: "/dashboard",    label: "Dashboard"    },
 ];
 
@@ -23,6 +26,7 @@ const LINKS = [
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const user = useStore((s) => s.user);
 
   useEffect(() => {
     const onKey    = (e) => { if (e.key === "Escape") setMenuOpen(false); };
@@ -40,7 +44,15 @@ export default function Navbar() {
 
   return (
     /* Outer wrapper: sticky + padding creates the "floating" gap from the viewport edge */
-    <div className="sticky top-0 z-50 px-4 sm:px-6 lg:px-8 pt-3 pointer-events-none">
+    <div className="relative sticky top-0 z-50 px-4 sm:px-6 lg:px-8 pt-3 pb-2 pointer-events-none">
+      {/* Full-width frosted strip: content scrolling under the navbar band blurs
+          out instead of colliding with the floating pill. Masked so it fades
+          at the bottom edge rather than cutting off hard. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-10 backdrop-blur-md bg-base/40
+                   [mask-image:linear-gradient(to_bottom,black_62%,transparent)]"
+      />
       <header
         className={`
           pointer-events-auto
@@ -100,18 +112,33 @@ export default function Navbar() {
           {/* Auth + mobile toggle */}
           <div className="flex items-center gap-2 shrink-0">
             <div className="hidden md:flex items-center gap-2">
-              <button
-                type="button"
-                className="font-display text-[0.8125rem] font-medium text-[#808098] hover:text-[#EDEDF2] px-4 py-1.5 rounded-xl transition-colors duration-150 hover:bg-white/[0.05]"
-              >
-                Sign in
-              </button>
-              <button
-                type="button"
-                className="font-display text-[0.8125rem] font-semibold text-white px-4 py-1.5 rounded-xl btn-primary shadow-[0_0_16px_rgba(99,102,241,0.3)]"
-              >
-                Try free
-              </button>
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="flex items-center gap-2 pl-1.5 pr-3.5 py-1 rounded-xl border border-white/[0.08] hover:bg-white/[0.05] transition-colors duration-150"
+                  title={user.email}
+                >
+                  <span className="w-6 h-6 rounded-lg bg-indigo-500/25 border border-indigo-500/40 flex items-center justify-center font-display text-[11px] font-semibold text-indigo-200 uppercase">
+                    {user.email?.[0] || "u"}
+                  </span>
+                  <span className="font-display text-[0.8125rem] font-medium text-[#EDEDF2]">Workspace</span>
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="font-display text-[0.8125rem] font-medium text-[#808098] hover:text-[#EDEDF2] px-4 py-1.5 rounded-xl transition-colors duration-150 hover:bg-white/[0.05]"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    to="/sandbox"
+                    className="font-display text-[0.8125rem] font-semibold text-white px-4 py-1.5 rounded-xl btn-primary shadow-[0_0_16px_rgba(99,102,241,0.3)]"
+                  >
+                    Try free
+                  </Link>
+                </>
+              )}
             </div>
             <button
               type="button"
@@ -158,12 +185,32 @@ export default function Navbar() {
                 ))}
               </nav>
               <div className="px-5 pb-5 pt-0 flex flex-col gap-2 border-t border-white/[0.04]">
-                <button type="button" className="w-full font-display text-sm font-medium text-[#EDEDF2] py-2.5 rounded-xl border border-white/[0.08] hover:bg-white/[0.05] transition-colors duration-150">
-                  Sign in
-                </button>
-                <button type="button" className="w-full font-display text-sm font-semibold text-white py-2.5 rounded-xl btn-primary">
-                  Try free
-                </button>
+                {user ? (
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full text-center font-display text-sm font-medium text-[#EDEDF2] py-2.5 rounded-xl border border-white/[0.08] hover:bg-white/[0.05] transition-colors duration-150"
+                  >
+                    Your workspace
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      onClick={() => setMenuOpen(false)}
+                      className="w-full text-center font-display text-sm font-medium text-[#EDEDF2] py-2.5 rounded-xl border border-white/[0.08] hover:bg-white/[0.05] transition-colors duration-150"
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      to="/sandbox"
+                      onClick={() => setMenuOpen(false)}
+                      className="w-full text-center font-display text-sm font-semibold text-white py-2.5 rounded-xl btn-primary"
+                    >
+                      Try free
+                    </Link>
+                  </>
+                )}
               </div>
             </motion.div>
           )}
