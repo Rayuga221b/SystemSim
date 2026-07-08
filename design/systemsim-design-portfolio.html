@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SystemSim — Visual Design Exploration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --base:#0B0E14;
+    --surface:#12161F;
+    --elevated:#1A2030;
+    --dim:#262E42;
+    --dim-soft:#1D2333;
+    --ink:#F3F5FA;
+    --muted:#8D97B0;
+    --accent:#7C5CFF;
+    --accent-2:#34E2A1;
+    --accent-soft:rgba(124,92,255,.14);
+    --accent2-soft:rgba(52,226,161,.14);
+    --warn:#FFB020;
+    --warn-soft:rgba(255,176,32,.14);
+    --danger:#FF5D5D;
+    --danger-soft:rgba(255,93,93,.14);
+    --radius-lg:16px;
+    --radius-md:10px;
+    --radius-sm:6px;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--base);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  h1,h2,h3,h4{font-family:'Sora',system-ui,sans-serif; margin:0; letter-spacing:-0.02em;}
+  p{margin:0;}
+  a{color:inherit;}
+  ::selection{background:var(--accent); color:#fff;}
+
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 28px;}
+  .section{padding:120px 0;}
+  .section-tight{padding:80px 0;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--accent); display:flex; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .eyebrow::before{content:""; width:20px; height:1px; background:var(--accent);}
+  .h2{font-size:clamp(28px,4vw,44px); font-weight:700; max-width:16ch;}
+  .lede{color:var(--muted); font-size:17px; max-width:56ch; margin-top:16px; line-height:1.65;}
+  .divider{height:1px; background:linear-gradient(90deg,transparent,var(--dim),transparent); margin:0;}
+
+  /* ---------- top progress nav ---------- */
+  .topnav{
+    position:sticky; top:0; z-index:50; backdrop-filter:blur(14px);
+    background:rgba(11,14,20,.78); border-bottom:1px solid var(--dim-soft);
+  }
+  .topnav .wrap{display:flex; align-items:center; justify-content:space-between; height:64px; max-width:1280px;}
+  .topnav-brand{display:flex; align-items:center; gap:10px; font-family:'Sora'; font-weight:700; font-size:15px;}
+  .topnav-links{display:flex; gap:26px; font-size:13px; color:var(--muted);}
+  .topnav-links a{text-decoration:none; transition:color .15s;}
+  .topnav-links a:hover{color:var(--ink);}
+  .topnav-tag{font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted); border:1px solid var(--dim); padding:4px 10px; border-radius:20px;}
+
+  /* ---------- cover ---------- */
+  .cover{padding:150px 0 110px; position:relative; overflow:hidden;}
+  .cover::before{
+    content:""; position:absolute; top:-200px; right:-160px; width:640px; height:640px; border-radius:50%;
+    background:radial-gradient(circle at center, var(--accent-soft), transparent 70%); filter:blur(10px); pointer-events:none;
+  }
+  .cover-kicker{font-family:'IBM Plex Mono'; font-size:12px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:22px;}
+  .cover h1{font-size:clamp(38px,6vw,68px); font-weight:800; max-width:15ch; line-height:1.05;}
+  .cover h1 span{color:var(--accent);}
+  .cover-lede{color:var(--muted); font-size:19px; max-width:60ch; margin-top:22px; line-height:1.65;}
+  .cover-meta{display:flex; gap:48px; margin-top:56px; flex-wrap:wrap;}
+  .cover-meta div{font-size:13px;}
+  .cover-meta .k{font-family:'IBM Plex Mono'; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px;}
+  .cover-meta .v{font-weight:600;}
+
+  /* ---------- brief cards ---------- */
+  .brief-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:48px;}
+  .brief-card{background:var(--surface); border:1px solid var(--dim); border-radius:var(--radius-lg); padding:26px;}
+  .brief-card h4{font-size:15px; margin-bottom:10px;}
+  .brief-card p{color:var(--muted); font-size:14px; line-height:1.6;}
+  .brief-card .tagrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;}
+
+  .pill{
+    display:inline-flex; align-items:center; gap:6px; font-family:'IBM Plex Mono'; font-size:11px;
+    padding:5px 10px; border-radius:20px; border:1px solid var(--dim); color:var(--muted); background:var(--elevated);
+  }
+  .pill.bad{color:var(--danger); border-color:rgba(255,93,93,.3); background:var(--danger-soft);}
+  .pill.good{color:var(--accent-2); border-color:rgba(52,226,161,.3); background:var(--accent2-soft);}
+
+  /* ---------- logo section ---------- */
+  .explore-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:40px;}
+  .explore-card{background:var(--surface); border:1px solid var(--dim); border-radius:var(--radius-lg); padding:30px; text-align:center;}
+  .explore-card svg{width:64px; height:64px; margin-bottom:18px;}
+  .explore-card h4{font-size:14px; margin-bottom:6px;}
+  .explore-card p{font-size:12.5px; color:var(--muted); line-height:1.5;}
+  .explore-card.selected{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset;}
+  .explore-card .tag{
+    font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--accent); margin-bottom:14px; display:block;
+  }
+
+  .hero-mark{
+    margin-top:64px; background:var(--surface); border:1px solid var(--dim); border-radius:24px;
+    padding:64px; display:flex; align-items:center; justify-content:center; gap:80px; flex-wrap:wrap;
+  }
+  .hero-mark svg{width:140px; height:140px;}
+  .hero-mark .pulse-node{ transform-origin:46px 60px; animation:pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse{
+    0%,100%{ transform:scale(1); opacity:1; }
+    50%{ transform:scale(1.12); opacity:.85; }
+  }
+  .wordmark{font-family:'Sora'; font-weight:700; font-size:40px; letter-spacing:-0.02em;}
+  .wordmark .accent{color:var(--accent);}
+  .lockup{display:flex; align-items:center; gap:16px;}
+  .lockup svg{width:44px; height:44px;}
+
+  .variant-row{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:20px;}
+  .variant-card{background:var(--surface); border:1px solid var(--dim); border-radius:var(--radius-md); padding:24px; display:flex; flex-direction:column; align-items:center; gap:14px;}
+  .variant-card.light{background:#F3F5FA;}
+  .variant-card.light svg .node-fill{fill:#0B0E14;}
+  .variant-card.light svg .edge-stroke{stroke:#0B0E14;}
+  .variant-card span{font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted);}
+  .variant-card.light span{color:#5b6478;}
+  .size-row{display:flex; align-items:center; gap:26px;}
+  .size-row svg{flex-shrink:0;}
+
+  /* ---------- color system ---------- */
+  .swatch-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:40px;}
+  .swatch{border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--dim);}
+  .swatch-color{height:100px;}
+  .swatch-info{background:var(--surface); padding:14px 16px;}
+  .swatch-info .name{font-size:13px; font-weight:600;}
+  .swatch-info .hex{font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--muted); margin-top:3px;}
+  .swatch-info .use{font-size:11.5px; color:var(--muted); margin-top:8px; line-height:1.5;}
+
+  .semantic-row{display:flex; gap:14px; margin-top:16px; flex-wrap:wrap;}
+  .semantic-chip{
+    display:flex; align-items:center; gap:8px; padding:9px 14px; border-radius:20px; font-size:12.5px; border:1px solid;
+  }
+  .semantic-chip .dot{width:8px; height:8px; border-radius:50%;}
+
+  /* ---------- type ---------- */
+  .type-block{padding:28px 0; border-bottom:1px solid var(--dim-soft);}
+  .type-block:first-child{padding-top:0;}
+  .type-meta{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+  .type-meta .role{font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;}
+  .type-meta .spec{font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted);}
+  .type-sample-display{font-family:'Sora'; font-weight:700; font-size:44px; letter-spacing:-0.02em;}
+  .type-sample-body{font-family:'Inter'; font-size:17px; color:var(--ink); max-width:60ch; line-height:1.65;}
+  .type-sample-mono{font-family:'IBM Plex Mono'; font-size:14px; color:var(--accent-2); background:var(--elevated); display:inline-block; padding:10px 14px; border-radius:8px; border:1px solid var(--dim);}
+
+  /* ---------- component kit ---------- */
+  .kit-card{background:var(--surface); border:1px solid var(--dim); border-radius:var(--radius-lg); padding:28px; margin-top:16px;}
+  .kit-label{font-family:'IBM Plex Mono'; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:18px;}
+  .kit-row{display:flex; gap:12px; flex-wrap:wrap; align-items:center;}
+
+  .btn{font-family:'Inter'; font-weight:600; font-size:13.5px; padding:10px 18px; border-radius:9px; border:1px solid transparent; cursor:default; display:inline-flex; align-items:center; gap:8px;}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),#9B7FFF); color:#fff;}
+  .btn-secondary{background:var(--accent2-soft); color:var(--accent-2); border-color:rgba(52,226,161,.35);}
+  .btn-ghost{background:transparent; border-color:var(--dim); color:var(--ink);}
+  .btn-ghost:hover{border-color:var(--accent);}
+
+  .node-chip{
+    display:flex; align-items:center; gap:9px; padding:9px 13px; border-radius:10px; border:1px solid var(--dim);
+    background:var(--elevated); font-size:12.5px; font-weight:500; position:relative;
+  }
+  .node-chip .ic{width:22px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px;}
+  .node-chip.idle .ic{background:rgba(141,151,176,.14); color:var(--muted);}
+  .node-chip.healthy .ic{background:var(--accent2-soft); color:var(--accent-2);}
+  .node-chip.healthy{border-color:rgba(52,226,161,.3);}
+  .node-chip.bottleneck{border-color:rgba(255,176,32,.4);}
+  .node-chip.bottleneck .ic{background:var(--warn-soft); color:var(--warn);}
+  .node-chip.bottleneck::after{
+    content:"⚠ bottleneck"; font-family:'IBM Plex Mono'; font-size:9.5px; color:var(--warn); position:absolute;
+    bottom:-19px; left:0;
+  }
+  .node-chip.down .ic{background:var(--danger-soft); color:var(--danger);}
+  .node-chip.down{border-color:rgba(255,93,93,.4);}
+
+  .tag-cat{font-family:'IBM Plex Mono'; font-size:10.5px; padding:4px 9px; border-radius:5px; text-transform:uppercase; letter-spacing:.05em;}
+  .tag-cat.ingress{background:var(--accent-soft); color:#B6A6FF;}
+  .tag-cat.compute{background:var(--warn-soft); color:var(--warn);}
+  .tag-cat.storage{background:var(--accent2-soft); color:var(--accent-2);}
+  .tag-cat.async{background:rgba(124,92,255,.18); color:#C9BCFF;}
+
+  .input-mock{background:var(--base); border:1px solid var(--dim); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--muted); width:220px;}
+
+  /* ---------- screens ---------- */
+  .screen-block{margin-top:64px;}
+  .screen-tag{font-family:'IBM Plex Mono'; font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px;}
+  .screen-title{font-size:22px; font-weight:700; margin-bottom:8px;}
+  .screen-desc{color:var(--muted); font-size:14px; max-width:64ch; margin-bottom:26px; line-height:1.6;}
+
+  .browser-frame{
+    background:var(--surface); border:1px solid var(--dim); border-radius:16px; overflow:hidden;
+    box-shadow:0 40px 90px -30px rgba(0,0,0,.6);
+  }
+  .browser-bar{
+    height:42px; display:flex; align-items:center; gap:8px; padding:0 16px; background:var(--elevated);
+    border-bottom:1px solid var(--dim);
+  }
+  .browser-dot{width:9px; height:9px; border-radius:50%; background:var(--dim);}
+  .browser-url{
+    margin-left:12px; font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted); background:var(--base);
+    padding:5px 12px; border-radius:6px; flex:1; max-width:280px;
+  }
+
+  /* app shell */
+  .app-shell{display:flex; min-height:520px;}
+  .app-rail{
+    width:56px; background:var(--base); border-right:1px solid var(--dim); display:flex; flex-direction:column;
+    align-items:center; padding:18px 0; gap:22px;
+  }
+  .rail-icon{width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--muted);}
+  .rail-icon.active{background:var(--accent-soft); color:var(--accent);}
+  .app-sidebar{width:210px; background:var(--surface); border-right:1px solid var(--dim); padding:18px 14px; overflow:hidden;}
+  .sidebar-head{font-family:'IBM Plex Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:16px 0 8px;}
+  .sidebar-head:first-child{margin-top:0;}
+  .sidebar-chip{
+    display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:7px; font-size:12px; color:var(--ink);
+    margin-bottom:4px;
+  }
+  .sidebar-chip:hover{background:var(--elevated);}
+  .dotcat{width:6px; height:6px; border-radius:50%; flex-shrink:0;}
+  .dotcat.ingress{background:#B6A6FF;} .dotcat.compute{background:var(--warn);}
+  .dotcat.storage{background:var(--accent-2);} .dotcat.async{background:#8B6FFF;}
+
+  .app-main{flex:1; background:var(--base); position:relative; display:flex; flex-direction:column;}
+  .canvas-topbar{
+    height:52px; border-bottom:1px solid var(--dim); display:flex; align-items:center; justify-content:space-between;
+    padding:0 18px; background:var(--surface);
+  }
+  .canvas-area{flex:1; position:relative; background-image:radial-gradient(var(--dim-soft) 1px, transparent 1px); background-size:22px 22px;}
+  .app-panel{width:230px; background:var(--surface); border-left:1px solid var(--dim); padding:18px;}
+  .panel-metric{margin-bottom:16px;}
+  .panel-metric .lbl{font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:.06em;}
+  .panel-metric .val{font-family:'Sora'; font-weight:700; font-size:20px; margin-top:2px;}
+  .bar-track{height:6px; background:var(--elevated); border-radius:4px; margin-top:8px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:4px;}
+
+  .callout{border-radius:10px; padding:12px 14px; font-size:12px; line-height:1.5; border:1px solid; margin-top:6px;}
+  .callout.warn{background:var(--warn-soft); border-color:rgba(255,176,32,.35); color:#FFD27A;}
+
+  .cnode{
+    position:absolute; background:var(--elevated); border:1px solid var(--dim); border-radius:9px; padding:8px 12px;
+    font-size:11.5px; display:flex; align-items:center; gap:7px; box-shadow:0 8px 20px -8px rgba(0,0,0,.5);
+  }
+  .cnode .ic{width:18px; height:18px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:9.5px;}
+  .cnode.bottleneck{border-color:var(--warn); box-shadow:0 0 0 3px rgba(255,176,32,.15);}
+
+  svg.edges{position:absolute; inset:0; width:100%; height:100%;}
+
+  /* dashboard rows */
+  .drow{display:flex; align-items:center; justify-content:space-between; padding:14px 4px; border-bottom:1px solid var(--dim-soft); font-size:13px;}
+  .drow:hover{background:var(--elevated);}
+  .drow .name{font-weight:600;}
+  .drow .meta{color:var(--muted); font-size:11.5px; margin-top:3px;}
+  .stat-strip{display:flex; gap:28px; margin-bottom:8px;}
+  .stat-strip .stat .num{font-family:'Sora'; font-weight:700; font-size:24px;}
+  .stat-strip .stat .lbl{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-top:2px;}
+
+  /* case study reader */
+  .article{padding:36px;}
+  .article-meta{display:flex; align-items:center; gap:10px; margin-bottom:18px;}
+  .company-chip{font-family:'IBM Plex Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; padding:4px 10px; border-radius:5px; background:var(--elevated); border:1px solid var(--dim); color:var(--muted);}
+  .article h3{font-size:24px; font-weight:700; max-width:28ch; margin-bottom:20px;}
+  .ps-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:22px;}
+  .ps-card{background:var(--elevated); border:1px solid var(--dim); border-radius:12px; padding:18px;}
+  .ps-card .k{font-family:'IBM Plex Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;}
+  .ps-card.problem .k{color:var(--danger);}
+  .ps-card.solution .k{color:var(--accent-2);}
+  .ps-card p{font-size:12.5px; color:var(--muted); line-height:1.6;}
+  .simulate-cta{
+    display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,var(--accent-soft),transparent);
+    border:1px solid rgba(124,92,255,.35); border-radius:12px; padding:16px 20px;
+  }
+  .simulate-cta .t{font-weight:600; font-size:13.5px;} .simulate-cta .s{font-size:11.5px; color:var(--muted); margin-top:3px;}
+
+  /* principles */
+  .principle-list{margin-top:40px; display:flex; flex-direction:column;}
+  .principle-row{display:grid; grid-template-columns:60px 1fr; gap:24px; padding:26px 0; border-top:1px solid var(--dim-soft);}
+  .principle-row:last-child{border-bottom:1px solid var(--dim-soft);}
+  .principle-num{font-family:'IBM Plex Mono'; font-size:13px; color:var(--accent);}
+  .principle-row h4{font-size:16px; margin-bottom:6px;}
+  .principle-row p{color:var(--muted); font-size:13.5px; max-width:64ch; line-height:1.6;}
+
+  footer{padding:80px 0 60px; text-align:center;}
+  footer .lockup{justify-content:center; margin-bottom:18px;}
+  footer p{color:var(--muted); font-size:13px;}
+
+  @media (max-width:900px){
+    .brief-grid, .explore-grid, .swatch-grid{grid-template-columns:1fr;}
+    .variant-row{grid-template-columns:repeat(2,1fr);}
+    .ps-grid{grid-template-columns:1fr;}
+    .app-shell{flex-direction:column;}
+    .app-sidebar, .app-rail, .app-panel{width:100%;}
+    .topnav-links{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP NAV ============ -->
+<nav class="topnav">
+  <div class="wrap">
+    <div class="topnav-brand">
+      <svg viewBox="0 0 120 120" width="22" height="22">
+        <path class="edge-stroke" d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="8" stroke-linecap="round"/>
+        <path class="edge-stroke" d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="86" cy="22" r="11" fill="#F3F5FA"/>
+        <circle cx="86" cy="98" r="11" fill="#F3F5FA"/>
+        <circle cx="46" cy="60" r="14" fill="#34E2A1"/>
+      </svg>
+      SystemSim <span style="color:var(--muted); font-weight:400;">— Design Exploration</span>
+    </div>
+    <div class="topnav-links">
+      <a href="#brief">Brief</a>
+      <a href="#logo">Logo</a>
+      <a href="#color">Color</a>
+      <a href="#type">Type</a>
+      <a href="#components">Components</a>
+      <a href="#screens">Screens</a>
+      <a href="#principles">Principles</a>
+    </div>
+    <div class="topnav-tag">v1 · concept</div>
+  </div>
+</nav>
+
+<!-- ============ COVER ============ -->
+<header class="cover">
+  <div class="wrap">
+    <div class="cover-kicker">Product design case study — not yet shipped</div>
+    <h1>Design distributed systems.<br>Break them <span>on purpose.</span></h1>
+    <p class="cover-lede">
+      A ground-up visual identity and UI concept for SystemSim, an interactive platform where engineers
+      build architectures on a canvas, load-test them, and learn from how Discord, Netflix, Slack and
+      Uber failed at scale. This deck proposes a new mark, system, and screen set for review — pick what
+      lands and we fold it into the real app.
+    </p>
+    <div class="cover-meta">
+      <div><div class="k">Product</div><div class="v">SystemSim</div></div>
+      <div><div class="k">For</div><div class="v">Interview-prep engineers</div></div>
+      <div><div class="k">Surface</div><div class="v">Web · dark</div></div>
+      <div><div class="k">Status</div><div class="v">Concept, v1</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ============ BRIEF ============ -->
+<section class="section" id="brief">
+  <div class="wrap">
+    <div class="eyebrow">01 · Brief</div>
+    <h2 class="h2">Who this is for, and what it has to feel like</h2>
+    <p class="lede">
+      SystemSim is used in short, high-focus study sessions — not casual browsing. The identity has to earn
+      trust fast: technical enough to be credible to senior engineers, warm enough to make failure feel like
+      learning instead of grading.
+    </p>
+    <div class="brief-grid">
+      <div class="brief-card">
+        <h4>Audience</h4>
+        <p>Software engineers prepping for system-design interviews. Time-pressured, technically confident,
+        allergic to fluff. They want signal, not decoration.</p>
+        <div class="tagrow"><span class="pill">time-pressured</span><span class="pill">senior-leaning</span></div>
+      </div>
+      <div class="brief-card">
+        <h4>Personality target</h4>
+        <p>The best professor you ever had: clear, structured, never condescending. Rewards curiosity,
+        never punishes mistakes.</p>
+        <div class="tagrow"><span class="pill good">clear</span><span class="pill good">confident</span><span class="pill good">warm</span></div>
+      </div>
+      <div class="brief-card">
+        <h4>Avoid</h4>
+        <p>Bloated diagramming-tool chrome (too many panels, no soul) on one side, bare LeetCode utilitarianism
+        (zero craft) on the other.</p>
+        <div class="tagrow"><span class="pill bad">corporate</span><span class="pill bad">soulless</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ============ LOGO ============ -->
+<section class="section" id="logo">
+  <div class="wrap">
+    <div class="eyebrow">02 · Mark</div>
+    <h2 class="h2">Three directions, one signal</h2>
+    <p class="lede">
+      Every concept starts from the same idea: the product's entire interaction model is nodes connected by
+      edges. The mark should <em>be</em> that idea, not illustrate it.
+    </p>
+
+    <div class="explore-grid">
+      <div class="explore-card">
+        <svg viewBox="0 0 120 120">
+          <path d="M20 60 L45 60 L52 40 L62 80 L70 60 L100 60" fill="none" stroke="#8D97B0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <polygon points="60,18 96,39 96,81 60,102 24,81 24,39" fill="none" stroke="#8D97B0" stroke-width="6" stroke-linejoin="round"/>
+        </svg>
+        <span class="tag">Concept B</span>
+        <h4>Chip Pulse</h4>
+        <p>A component under load — hexagon chip with a live waveform through it. Reads as "monitoring," less as "SystemSim."</p>
+      </div>
+
+      <div class="explore-card selected">
+        <svg viewBox="0 0 120 120">
+          <path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/>
+          <path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/>
+          <circle cx="86" cy="22" r="10" fill="#F3F5FA"/>
+          <circle cx="86" cy="98" r="10" fill="#F3F5FA"/>
+          <circle cx="46" cy="60" r="13" fill="#34E2A1"/>
+        </svg>
+        <span class="tag">Concept A · selected</span>
+        <h4>Pulse Node</h4>
+        <p>Three nodes, one flowing edge, tracing an "S." The center node is the one under simulation — always live, always green.</p>
+      </div>
+
+      <div class="explore-card">
+        <svg viewBox="0 0 120 120">
+          <rect x="16" y="20" width="88" height="16" rx="8" fill="none" stroke="#8D97B0" stroke-width="5"/>
+          <rect x="28" y="52" width="64" height="16" rx="8" fill="none" stroke="#8D97B0" stroke-width="5"/>
+          <rect x="40" y="84" width="40" height="16" rx="8" fill="none" stroke="#8D97B0" stroke-width="5"/>
+          <circle cx="96" cy="28" r="4" fill="#8D97B0"/>
+        </svg>
+        <span class="tag">Concept C</span>
+        <h4>Layer Stack</h4>
+        <p>Literal architecture-diagram shorthand: client / server / data tiers. Clean but generic — reads as "any dev tool."</p>
+      </div>
+    </div>
+
+    <div class="hero-mark">
+      <svg viewBox="0 0 120 120">
+        <path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/>
+        <path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="86" cy="22" r="10" fill="#F3F5FA"/>
+        <circle cx="86" cy="98" r="10" fill="#F3F5FA"/>
+        <circle class="pulse-node" cx="46" cy="60" r="13" fill="#34E2A1"/>
+      </svg>
+      <div>
+        <div class="wordmark">System<span class="accent">Sim</span></div>
+        <p style="color:var(--muted); font-size:13px; margin-top:10px; max-width:38ch;">
+          The center node pulses — a small, quiet cue that something is always simulating. Works from
+          favicon size up to a splash screen.
+        </p>
+      </div>
+    </div>
+
+    <div class="kit-label" style="margin-top:48px;">Lockups &amp; variants</div>
+    <div class="variant-row">
+      <div class="variant-card">
+        <div class="lockup">
+          <svg viewBox="0 0 120 120"><path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="8" stroke-linecap="round"/><path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="8" stroke-linecap="round"/><circle cx="86" cy="22" r="10" fill="#F3F5FA"/><circle cx="86" cy="98" r="10" fill="#F3F5FA"/><circle cx="46" cy="60" r="13" fill="#34E2A1"/></svg>
+          <div class="wordmark" style="font-size:22px;">System<span class="accent">Sim</span></div>
+        </div>
+        <span>Primary lockup</span>
+      </div>
+      <div class="variant-card">
+        <svg viewBox="0 0 120 120" width="52" height="52"><path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="9" stroke-linecap="round"/><path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="9" stroke-linecap="round"/><circle cx="86" cy="22" r="10" fill="#F3F5FA"/><circle cx="86" cy="98" r="10" fill="#F3F5FA"/><circle cx="46" cy="60" r="13" fill="#34E2A1"/></svg>
+        <span>Icon / favicon</span>
+      </div>
+      <div class="variant-card light">
+        <svg viewBox="0 0 120 120" width="52" height="52"><path class="edge-stroke" d="M86 22 Q50 30 46 60" fill="none" stroke="#0B0E14" stroke-width="9" stroke-linecap="round"/><path class="edge-stroke" d="M46 60 Q42 90 86 98" fill="none" stroke="#0B0E14" stroke-width="9" stroke-linecap="round"/><circle class="node-fill" cx="86" cy="22" r="10" fill="#0B0E14"/><circle class="node-fill" cx="86" cy="98" r="10" fill="#0B0E14"/><circle cx="46" cy="60" r="13" fill="#7C5CFF"/></svg>
+        <span>On light</span>
+      </div>
+      <div class="variant-card">
+        <div class="size-row">
+          <svg viewBox="0 0 120 120" width="14" height="14"><path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="14" stroke-linecap="round"/><path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="14" stroke-linecap="round"/><circle cx="86" cy="22" r="10" fill="#F3F5FA"/><circle cx="86" cy="98" r="10" fill="#F3F5FA"/><circle cx="46" cy="60" r="13" fill="#34E2A1"/></svg>
+          <svg viewBox="0 0 120 120" width="24" height="24"><path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="11" stroke-linecap="round"/><path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="11" stroke-linecap="round"/><circle cx="86" cy="22" r="10" fill="#F3F5FA"/><circle cx="86" cy="98" r="10" fill="#F3F5FA"/><circle cx="46" cy="60" r="13" fill="#34E2A1"/></svg>
+          <svg viewBox="0 0 120 120" width="36" height="36"><path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="8" stroke-linecap="round"/><path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="8" stroke-linecap="round"/><circle cx="86" cy="22" r="10" fill="#F3F5FA"/><circle cx="86" cy="98" r="10" fill="#F3F5FA"/><circle cx="46" cy="60" r="13" fill="#34E2A1"/></svg>
+        </div>
+        <span>16 · 24 · 36px legibility</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ============ COLOR ============ -->
+<section class="section" id="color">
+  <div class="wrap">
+    <div class="eyebrow">03 · Color</div>
+    <h2 class="h2">Dark technical, two working accents</h2>
+    <p class="lede">
+      One neutral ramp for structure, violet for identity and primary action, mint for "this is healthy /
+      simulating" states. Amber and coral are reserved strictly for semantics — never decoration.
+    </p>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#0B0E14;"></div><div class="swatch-info"><div class="name">Base</div><div class="hex">#0B0E14</div><div class="use">Page background.</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#12161F;"></div><div class="swatch-info"><div class="name">Surface</div><div class="hex">#12161F</div><div class="use">Cards, panels.</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#1A2030;"></div><div class="swatch-info"><div class="name">Elevated</div><div class="hex">#1A2030</div><div class="use">Hover states, raised chips.</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#7C5CFF;"></div><div class="swatch-info"><div class="name">Accent — Violet</div><div class="hex">#7C5CFF</div><div class="use">Brand, primary actions, active states.</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#34E2A1;"></div><div class="swatch-info"><div class="name">Accent — Mint</div><div class="hex">#34E2A1</div><div class="use">Healthy / simulating / success only.</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#F3F5FA;"></div><div class="swatch-info"><div class="name">Ink</div><div class="hex">#F3F5FA</div><div class="use">Primary text.</div></div></div>
+    </div>
+    <div class="kit-label" style="margin-top:36px;">Semantic-only colors</div>
+    <div class="semantic-row">
+      <div class="semantic-chip" style="border-color:rgba(255,176,32,.35); background:var(--warn-soft); color:#FFD27A;"><span class="dot" style="background:#FFB020;"></span>Amber #FFB020 — bottleneck / warning</div>
+      <div class="semantic-chip" style="border-color:rgba(255,93,93,.35); background:var(--danger-soft); color:#FF9C9C;"><span class="dot" style="background:#FF5D5D;"></span>Coral #FF5D5D — failure / down</div>
+      <div class="semantic-chip" style="border-color:var(--dim); background:var(--elevated); color:var(--muted);"><span class="dot" style="background:#8D97B0;"></span>Muted #8D97B0 — secondary text, ≥4.5:1</div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ============ TYPE ============ -->
+<section class="section" id="type">
+  <div class="wrap">
+    <div class="eyebrow">04 · Type</div>
+    <h2 class="h2">Three families, one job each</h2>
+    <p class="lede">Sora carries confidence in headings. Inter stays invisible and readable everywhere else. IBM Plex Mono flags anything measured — metrics, tags, code.</p>
+
+    <div class="type-block">
+      <div class="type-meta"><span class="role">Display — Sora 700</span><span class="spec">headings only · max 44px</span></div>
+      <div class="type-sample-display">Simulate the failure before it's yours.</div>
+    </div>
+    <div class="type-block">
+      <div class="type-meta"><span class="role">Body / UI — Inter 400–600</span><span class="spec">52ch prose max</span></div>
+      <div class="type-sample-body">Drag components onto the canvas, wire them together, then push load through the system. Bottlenecks surface immediately — no theory, just the graph telling you where it breaks.</div>
+    </div>
+    <div class="type-block">
+      <div class="type-meta"><span class="role">Technical — IBM Plex Mono 400–600</span><span class="spec">metrics, tags, code</span></div>
+      <span class="type-sample-mono">p95 latency: 142ms · throughput: 4,820 rps · error rate: 0.3%</span>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ============ COMPONENTS ============ -->
+<section class="section" id="components">
+  <div class="wrap">
+    <div class="eyebrow">05 · Components</div>
+    <h2 class="h2">A kit built around the node, not the button</h2>
+    <p class="lede">Standard controls stay quiet. The node chip — the thing users actually spend their session looking at — carries the most design weight, with color+icon+label states so bottlenecks never rely on color alone.</p>
+
+    <div class="kit-card">
+      <div class="kit-label">Buttons</div>
+      <div class="kit-row">
+        <button class="btn btn-primary">Run simulation</button>
+        <button class="btn btn-secondary">Save design</button>
+        <button class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+
+    <div class="kit-card">
+      <div class="kit-label">Node states — color + icon + label, never color alone</div>
+      <div class="kit-row" style="gap:34px;">
+        <div class="node-chip idle"><span class="ic">◻</span>App Server</div>
+        <div class="node-chip healthy"><span class="ic">✓</span>Load Balancer</div>
+        <div class="node-chip bottleneck"><span class="ic">!</span>SQL Database</div>
+        <div class="node-chip down"><span class="ic">✕</span>Cache</div>
+      </div>
+    </div>
+
+    <div class="kit-card">
+      <div class="kit-label">Category tags</div>
+      <div class="kit-row">
+        <span class="tag-cat ingress">Ingress</span>
+        <span class="tag-cat compute">Compute</span>
+        <span class="tag-cat storage">Storage</span>
+        <span class="tag-cat async">Async</span>
+      </div>
+    </div>
+
+    <div class="kit-card">
+      <div class="kit-label">Inputs &amp; fields</div>
+      <div class="kit-row">
+        <input class="input-mock" value="5,000 rps" readonly>
+        <span class="pill">rps</span>
+        <span class="pill good">stable</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ============ SCREENS ============ -->
+<section class="section" id="screens">
+  <div class="wrap">
+    <div class="eyebrow">06 · Screens</div>
+    <h2 class="h2">The system applied</h2>
+    <p class="lede">Five surfaces, one shell. The canvas is always the hero — chrome recedes to a thin rail and two collapsible panels.</p>
+
+    <!-- HOME -->
+    <div class="screen-block">
+      <div class="screen-tag">Landing</div>
+      <div class="screen-title">Home</div>
+      <p class="screen-desc">First 5 seconds have to say "real tool," not "marketing site." Canvas preview does the talking.</p>
+      <div class="browser-frame">
+        <div class="browser-bar"><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-url">systemsim.app</span></div>
+        <div style="padding:0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-bottom:1px solid var(--dim);">
+            <div class="lockup"><svg viewBox="0 0 120 120" width="22" height="22"><path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="9" stroke-linecap="round"/><path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="9" stroke-linecap="round"/><circle cx="86" cy="22" r="10" fill="#F3F5FA"/><circle cx="86" cy="98" r="10" fill="#F3F5FA"/><circle cx="46" cy="60" r="13" fill="#34E2A1"/></svg><span style="font-family:'Sora'; font-weight:700; font-size:15px;">System<span class="accent">Sim</span></span></div>
+            <div style="display:flex; gap:22px; font-size:12.5px; color:var(--muted);"><span>Sandbox</span><span>Challenges</span><span>Case Studies</span><span>Learn</span></div>
+            <div style="display:flex; gap:10px;"><button class="btn btn-ghost" style="padding:7px 14px; font-size:12px;">Sign in</button><button class="btn btn-primary" style="padding:7px 14px; font-size:12px;">Get started</button></div>
+          </div>
+          <div style="padding:60px 32px 50px; text-align:center;">
+            <h3 style="font-size:32px; max-width:20ch; margin:0 auto 14px;">Build it. Load it. Watch it break.</h3>
+            <p style="color:var(--muted); font-size:14px; max-width:48ch; margin:0 auto 26px;">Design distributed architectures on a canvas, simulate real load patterns, and study how Discord, Netflix and Slack failed at scale.</p>
+            <div style="display:flex; gap:10px; justify-content:center; margin-bottom:44px;"><button class="btn btn-primary">Open sandbox</button><button class="btn btn-ghost">See case studies</button></div>
+            <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+              <div class="node-chip healthy" style="position:relative;"><span class="ic">✓</span>Client</div>
+              <div class="node-chip healthy"><span class="ic">✓</span>Load Balancer</div>
+              <div class="node-chip bottleneck"><span class="ic">!</span>App Server</div>
+              <div class="node-chip idle"><span class="ic">◻</span>Cache</div>
+            </div>
+          </div>
+          <div style="display:flex; justify-content:center; gap:10px; padding:20px 32px 32px; border-top:1px solid var(--dim); flex-wrap:wrap;">
+            <span class="pill">Discord</span><span class="pill">Netflix</span><span class="pill">Slack</span><span class="pill">Uber</span><span class="pill">Twitter / X</span><span class="pill">Stripe</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SANDBOX -->
+    <div class="screen-block">
+      <div class="screen-tag">Core loop</div>
+      <div class="screen-title">Sandbox</div>
+      <p class="screen-desc">The hero screen. Palette on the left, live graph in the center, results on the right — bottleneck called out by color, icon, and label in the same breath.</p>
+      <div class="browser-frame">
+        <div class="browser-bar"><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-url">systemsim.app/sandbox</span></div>
+        <div class="app-shell">
+          <div class="app-rail">
+            <div class="rail-icon active">▦</div><div class="rail-icon">◎</div><div class="rail-icon">▤</div><div class="rail-icon">▥</div><div class="rail-icon">☰</div>
+          </div>
+          <div class="app-sidebar">
+            <div class="sidebar-head">Ingress</div>
+            <div class="sidebar-chip"><span class="dotcat ingress"></span>Client</div>
+            <div class="sidebar-chip"><span class="dotcat ingress"></span>API Gateway</div>
+            <div class="sidebar-chip"><span class="dotcat ingress"></span>Load Balancer</div>
+            <div class="sidebar-head">Compute</div>
+            <div class="sidebar-chip"><span class="dotcat compute"></span>App Server</div>
+            <div class="sidebar-chip"><span class="dotcat compute"></span>Worker</div>
+            <div class="sidebar-head">Storage</div>
+            <div class="sidebar-chip"><span class="dotcat storage"></span>SQL Database</div>
+            <div class="sidebar-chip"><span class="dotcat storage"></span>Cache (Redis)</div>
+            <div class="sidebar-head">Async</div>
+            <div class="sidebar-chip"><span class="dotcat async"></span>Message Queue</div>
+          </div>
+          <div class="app-main">
+            <div class="canvas-topbar">
+              <div style="display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted);"><span class="mono">Load</span><span class="input-mock" style="width:110px; padding:6px 10px;">5,000 rps</span></div>
+              <button class="btn btn-primary" style="padding:7px 16px; font-size:12px;">▶ Simulate</button>
+            </div>
+            <div class="canvas-area">
+              <svg class="edges"><line x1="70" y1="70" x2="190" y2="70" stroke="#262E42" stroke-width="2"/><line x1="260" y1="70" x2="360" y2="60" stroke="#262E42" stroke-width="2"/><line x1="260" y1="70" x2="360" y2="120" stroke="#262E42" stroke-width="2"/><line x1="430" y1="60" x2="490" y2="90" stroke="#262E42" stroke-width="2"/><line x1="430" y1="120" x2="490" y2="90" stroke="#262E42" stroke-width="2"/></svg>
+              <div class="cnode" style="top:52px; left:26px;"><span class="ic" style="background:var(--accent2-soft); color:var(--accent-2);">C</span>Client</div>
+              <div class="cnode" style="top:52px; left:196px;"><span class="ic" style="background:var(--accent2-soft); color:var(--accent-2);">LB</span>Load Balancer</div>
+              <div class="cnode bottleneck" style="top:42px; left:366px;"><span class="ic" style="background:var(--warn-soft); color:var(--warn);">!</span>App Server × 2</div>
+              <div class="cnode" style="top:102px; left:366px;"><span class="ic" style="background:var(--warn-soft); color:var(--warn);">!</span>App Server</div>
+              <div class="cnode" style="top:72px; left:496px;"><span class="ic" style="background:var(--accent2-soft); color:var(--accent-2);">DB</span>SQL Database</div>
+            </div>
+          </div>
+          <div class="app-panel">
+            <div class="kit-label" style="margin-bottom:16px;">Results</div>
+            <div class="panel-metric"><div class="lbl">Throughput</div><div class="val">4,820 rps</div><div class="bar-track"><div class="bar-fill" style="width:76%; background:var(--accent-2);"></div></div></div>
+            <div class="panel-metric"><div class="lbl">p95 Latency</div><div class="val">142 ms</div><div class="bar-track"><div class="bar-fill" style="width:38%; background:var(--accent);"></div></div></div>
+            <div class="panel-metric"><div class="lbl">Error rate</div><div class="val">0.3%</div><div class="bar-track"><div class="bar-fill" style="width:8%; background:var(--accent-2);"></div></div></div>
+            <div class="callout warn"><strong>Bottleneck:</strong> App Server tier is CPU-saturated at 5,000 rps. Add a third replica or introduce a cache.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHALLENGE -->
+    <div class="screen-block">
+      <div class="screen-tag">Practice</div>
+      <div class="screen-title">Challenge workspace</div>
+      <p class="screen-desc">Same shell, scored. Rubric replaces the results panel so users see exactly what's missing, not just a number.</p>
+      <div class="browser-frame">
+        <div class="browser-bar"><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-url">systemsim.app/challenges/url-shortener</span></div>
+        <div class="app-shell" style="min-height:420px;">
+          <div class="app-rail"><div class="rail-icon">▦</div><div class="rail-icon active">◎</div><div class="rail-icon">▤</div><div class="rail-icon">▥</div><div class="rail-icon">☰</div></div>
+          <div class="app-main">
+            <div class="canvas-topbar">
+              <div><div style="font-weight:600; font-size:13px;">Design a URL Shortener</div><div style="font-size:11px; color:var(--muted);">Medium · 22:14 remaining</div></div>
+              <span class="pill good" style="font-size:12px; padding:6px 12px;">Score: 87 / 100</span>
+            </div>
+            <div class="canvas-area">
+              <svg class="edges"><line x1="60" y1="90" x2="170" y2="90" stroke="#262E42" stroke-width="2"/><line x1="240" y1="90" x2="340" y2="90" stroke="#262E42" stroke-width="2"/></svg>
+              <div class="cnode" style="top:72px; left:20px;"><span class="ic" style="background:var(--accent2-soft); color:var(--accent-2);">C</span>Client</div>
+              <div class="cnode" style="top:72px; left:180px;"><span class="ic" style="background:var(--accent2-soft); color:var(--accent-2);">AS</span>App Server</div>
+              <div class="cnode" style="top:72px; left:350px;"><span class="ic" style="background:var(--accent2-soft); color:var(--accent-2);">DB</span>Key-Value Store</div>
+            </div>
+          </div>
+          <div class="app-panel" style="width:260px;">
+            <div class="kit-label" style="margin-bottom:16px;">Rubric</div>
+            <div style="display:flex; flex-direction:column; gap:10px; font-size:12.5px;">
+              <div style="display:flex; gap:8px; align-items:flex-start;"><span style="color:var(--accent-2);">✓</span>Horizontally scalable app tier</div>
+              <div style="display:flex; gap:8px; align-items:flex-start;"><span style="color:var(--accent-2);">✓</span>Read-optimized data store</div>
+              <div style="display:flex; gap:8px; align-items:flex-start;"><span style="color:var(--accent-2);">✓</span>Handles hot-key collisions</div>
+              <div style="display:flex; gap:8px; align-items:flex-start;"><span style="color:var(--danger);">✕</span>Missing rate limiter on write path</div>
+            </div>
+            <div class="callout warn" style="margin-top:18px;">Reference solution adds a rate limiter before the app tier — try again to close the gap.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CASE STUDY -->
+    <div class="screen-block">
+      <div class="screen-tag">Learn from failure</div>
+      <div class="screen-title">Case study reader</div>
+      <p class="screen-desc">Problem and Solution sit side by side so the "why" is never more than a glance from the "how." Every case study ends in an action, not a period.</p>
+      <div class="browser-frame">
+        <div class="browser-bar"><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-url">systemsim.app/case-studies/discord-storage</span></div>
+        <div class="article">
+          <div class="article-meta"><span class="company-chip">Discord</span><span class="pill">Case study</span><span class="pill">Storage</span></div>
+          <h3>How Discord's storage engine buckled under a billion daily messages</h3>
+          <div class="ps-grid">
+            <div class="ps-card problem"><div class="k">Problem</div><p>A single Cassandra table grew past a trillion rows. Wide partitions turned routine reads into full-partition scans, and tail latency exploded during peak hours.</p></div>
+            <div class="ps-card solution"><div class="k">Solution</div><p>Migrated hot data to ScyllaDB with bucketed partitions sized to stay under 1MB, capping partition growth and restoring predictable p99 latency.</p></div>
+          </div>
+          <div class="simulate-cta"><div><div class="t">Simulate this incident →</div><div class="s">Opens a pre-loaded canvas with Discord's original architecture</div></div><button class="btn btn-primary" style="padding:8px 16px; font-size:12px;">Open canvas</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="screen-block">
+      <div class="screen-tag">Return visit</div>
+      <div class="screen-title">Dashboard</div>
+      <p class="screen-desc">Where progress becomes visible — saved designs and challenge history, no gamification chrome beyond what's earned.</p>
+      <div class="browser-frame">
+        <div class="browser-bar"><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-url">systemsim.app/dashboard</span></div>
+        <div class="article">
+          <div class="stat-strip">
+            <div class="stat"><div class="num">12</div><div class="lbl">Designs saved</div></div>
+            <div class="stat"><div class="num">6</div><div class="lbl">Challenges done</div></div>
+            <div class="stat"><div class="num">3-day</div><div class="lbl">Streak</div></div>
+          </div>
+          <div class="kit-label" style="margin-top:28px;">Saved designs</div>
+          <div class="drow"><div><div class="name">Chat system v2</div><div class="meta">Edited 2 hours ago · 9 components</div></div><span class="pill good">stable</span></div>
+          <div class="drow"><div><div class="name">Rate limiter sandbox</div><div class="meta">Edited yesterday · 4 components</div></div><span class="pill">draft</span></div>
+          <div class="drow"><div><div class="name">News feed fanout</div><div class="meta">Edited 3 days ago · 11 components</div></div><span class="pill bad">bottleneck</span></div>
+          <div class="kit-label" style="margin-top:24px;">Challenge history</div>
+          <div class="drow"><div><div class="name">Design a URL Shortener</div><div class="meta">Completed · Medium</div></div><span class="pill good">87 / 100</span></div>
+          <div class="drow"><div><div class="name">Design a Rate Limiter</div><div class="meta">Completed · Easy</div></div><span class="pill good">95 / 100</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ============ PRINCIPLES ============ -->
+<section class="section" id="principles">
+  <div class="wrap">
+    <div class="eyebrow">07 · Principles</div>
+    <h2 class="h2">What holds this together</h2>
+    <div class="principle-list">
+      <div class="principle-row"><div class="principle-num">01</div><div><h4>The canvas is the hero</h4><p>Every screen structure — rail, sidebar, panel — exists to serve the graph in the middle. If chrome ever competes with the canvas for attention, cut the chrome.</p></div></div>
+      <div class="principle-row"><div class="principle-num">02</div><div><h4>Never color alone</h4><p>Bottleneck, healthy, and down states always pair color with an icon and a label. Colorblind-safe by default, not by afterthought.</p></div></div>
+      <div class="principle-row"><div class="principle-num">03</div><div><h4>Mint is earned, not decorative</h4><p>The green accent only appears when something is actually healthy or actively simulating. It never shows up as a stylistic flourish.</p></div></div>
+      <div class="principle-row"><div class="principle-num">04</div><div><h4>Mono means "measured"</h4><p>If IBM Plex Mono is on screen, it's a number, a tag, or a piece of state — never a stylistic choice for its own sake.</p></div></div>
+      <div class="principle-row"><div class="principle-num">05</div><div><h4>Every case study ends in an action</h4><p>Reading about a failure is not the product. Simulating it is. The CTA at the bottom of every case study is non-negotiable.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="lockup">
+    <svg viewBox="0 0 120 120" width="26" height="26"><path d="M86 22 Q50 30 46 60" fill="none" stroke="#7C5CFF" stroke-width="9" stroke-linecap="round"/><path d="M46 60 Q42 90 86 98" fill="none" stroke="#7C5CFF" stroke-width="9" stroke-linecap="round"/><circle cx="86" cy="22" r="10" fill="#F3F5FA"/><circle cx="86" cy="98" r="10" fill="#F3F5FA"/><circle cx="46" cy="60" r="13" fill="#34E2A1"/></svg>
+    <div class="wordmark" style="font-size:20px;">System<span class="accent">Sim</span></div>
+  </div>
+  <p>Design exploration — pick what lands, we'll implement it in the real app.</p>
+</footer>
+
+</body>
+</html>

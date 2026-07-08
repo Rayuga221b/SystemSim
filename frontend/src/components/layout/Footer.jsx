@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 
 // Inline SVG icons for brands not in lucide-react v1 (brand icons were removed)
 const GithubIcon = ({ size = 14 }) => (
@@ -10,9 +11,12 @@ const GithubIcon = ({ size = 14 }) => (
 
 // ─── Navigation groups ────────────────────────────────────────────────────────
 
+const REPO_URL = "https://github.com/Rayuga221b/SystemSim";
+const CONTACT_EMAIL = "cloud.satyam75@gmail.com";
+
 const NAV_GROUPS = [
   {
-    title: "Explore",
+    title: "Product",
     links: [
       { label: "Sandbox",      to: "/sandbox"      },
       { label: "Challenges",   to: "/challenges"   },
@@ -23,26 +27,24 @@ const NAV_GROUPS = [
   {
     title: "Learn",
     links: [
-      { label: "Core Concepts",     to: "/learn"         },
-      { label: "Component Library", to: "/learn#components" },
-      { label: "Interview Prep",    to: "/interview"     },
-      { label: "Real Incidents",    to: "/case-studies"  },
-      { label: "Scored Practice",   to: "/challenges"    },
+      { label: "Core Concepts",     to: "/learn"             },
+      { label: "Component Library", to: "/learn#components"  },
+      { label: "Interview Prep",    to: "/interview"         },
     ],
   },
   {
-    title: "Project",
+    title: "Account",
     links: [
-      { label: "About",   to: "/" },
-      { label: "GitHub",  href: "https://github.com" },
-      { label: "Contact", href: "mailto:hello@systemsim.dev" },
+      { label: "Sign In", to: "/login" },
+      { label: "GitHub",  href: REPO_URL },
+      { label: "Contact", href: `mailto:${CONTACT_EMAIL}` },
     ],
   },
 ];
 
 const SOCIAL = [
-  { icon: GithubIcon,  label: "GitHub",  href: "https://github.com"         },
-  { icon: Mail,        label: "Email",   href: "mailto:hello@systemsim.dev"  },
+  { icon: GithubIcon,  label: "GitHub",  href: REPO_URL },
+  { icon: Mail,        label: "Email",   href: `mailto:${CONTACT_EMAIL}` },
 ];
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
@@ -61,10 +63,10 @@ export default function Footer() {
       <div
         className="relative z-10 mx-auto max-w-5xl rounded-2xl px-7 py-10 md:px-10 md:py-12"
         style={{
-          background: "radial-gradient(ellipse 120% 100% at 30% 0%, rgba(99,102,241,0.07) 0%, rgba(13,13,30,0.92) 60%)",
+          background: "radial-gradient(ellipse 120% 100% at 30% 0%, rgba(124, 92, 255,0.07) 0%, rgba(13,13,30,0.92) 60%)",
           backdropFilter: "blur(20px) saturate(160%)",
-          border: "1px solid rgba(99,102,241,0.14)",
-          boxShadow: "0 0 0 1px rgba(99,102,241,0.08), 0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)",
+          border: "1px solid rgba(124, 92, 255,0.14)",
+          boxShadow: "0 0 0 1px rgba(124, 92, 255,0.08), 0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
       >
         <div className="grid grid-cols-1 gap-10 md:grid-cols-4">
@@ -73,10 +75,13 @@ export default function Footer() {
           <div className="md:col-span-1 flex flex-col items-center md:items-start gap-5">
             {/* Logo + wordmark */}
             <Link to="/" className="flex items-center gap-2.5 select-none group">
-              <span className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shadow-[0_0_12px_rgba(99,102,241,0.2)] group-hover:bg-white/16 transition-colors duration-200">
-                <img src="/logo.png" alt="SystemSim" className="w-6 h-6 object-contain" />
+              <span className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shadow-[0_0_12px_rgba(124,92,255,0.2)] group-hover:bg-white/16 transition-colors duration-200">
+                <Logo size={22} />
               </span>
-              <span className="font-display font-semibold text-base text-[#EDEDF2] tracking-tight">
+              {/* text-[1rem] not text-base: this project's "base" theme color
+                  collides with Tailwind's built-in text-base (font-size)
+                  utility and silently overrides the text color below. */}
+              <span className="font-display font-semibold text-[1rem] text-[#EDEDF2] tracking-tight">
                 System<span className="text-indigo-400">Sim</span>
               </span>
             </Link>
@@ -143,7 +148,7 @@ export default function Footer() {
         {/* ── Bottom bar ───────────────────────────────────────────────────── */}
         <div
           className="mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3"
-          style={{ borderTop: "1px solid rgba(99,102,241,0.12)" }}
+          style={{ borderTop: "1px solid rgba(124, 92, 255,0.12)" }}
         >
           <p className="font-sans text-xs text-[#808098]/70">
             &copy; {new Date().getFullYear()} SystemSim. All rights reserved.

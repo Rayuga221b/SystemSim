@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useStore } from "@/store";
 import { api } from "@/api/client";
+import PageGlow from "@/components/ui/PageGlow";
 
 const MODE_BADGE = {
   sandbox:   "text-indigo-300 border-indigo-500/25 bg-indigo-500/[0.08]",
@@ -81,14 +82,18 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="bg-base min-h-screen">
-      <div className="max-w-4xl mx-auto px-6">
+    <div className="relative bg-base min-h-screen">
+      <PageGlow blobs={[
+        { x: "18%", y: "0%",  w: "55%", h: "65%", color: "rgba(124, 92, 255,0.16)" },
+        { x: "88%", y: "6%",  w: "40%", h: "50%", color: "rgba(139,92,246,0.10)" },
+      ]} />
+      <div className="relative z-10 max-w-4xl mx-auto px-6">
 
         {/* Header */}
         <div className="py-14 sm:py-16 border-b border-white/[0.05] flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
             <p className="font-mono text-xs text-indigo-400 tracking-[0.14em] uppercase mb-4">Workspace</p>
-            <h1 className="font-display font-semibold text-3xl sm:text-4xl text-ink mb-2">Welcome back</h1>
+            <h1 className="font-display font-semibold text-3xl sm:text-4xl mb-2 bg-gradient-to-r from-white via-white to-indigo-300 bg-clip-text text-transparent">Welcome back</h1>
             <p className="text-muted text-sm">{user.email}</p>
           </div>
           <div className="flex items-center gap-6 shrink-0">

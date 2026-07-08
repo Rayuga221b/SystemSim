@@ -71,7 +71,11 @@ export default function CanvasArea() {
       proOptions={{ hideAttribution: true }}
       className="canvas-surface"
     >
-      <Background variant={BackgroundVariant.Dots} gap={26} size={1.3} color="rgba(99,102,241,0.20)" />
+      {/* Two-layer "blueprint" grid — n8n-style: a fine dot lattice plus a
+          coarser, brighter grid every 5 cells for a sense of depth and scale
+          as you pan/zoom, instead of one flat repeating dot. */}
+      <Background id="grid-fine"   variant={BackgroundVariant.Dots} gap={26}  size={1.3} color="rgba(124, 92, 255,0.20)" />
+      <Background id="grid-coarse" variant={BackgroundVariant.Dots} gap={130} size={2.4} color="rgba(155, 133, 255,0.32)" />
       <Controls position="bottom-left" showInteractive={false} />
       <MiniMap
         position="bottom-right"
@@ -79,7 +83,7 @@ export default function CanvasArea() {
         zoomable
         maskColor="rgba(9,9,14,0.82)"
         style={{ backgroundColor: "#101016", border: "1px solid #1C1C2A", borderRadius: 8 }}
-        nodeColor={(n) => CATEGORY_COLOR[COMPONENT_BY_TYPE[n.data?.type]?.category] || "#6366F1"}
+        nodeColor={(n) => CATEGORY_COLOR[COMPONENT_BY_TYPE[n.data?.type]?.category] || "#7C5CFF"}
         nodeStrokeWidth={0}
       />
     </ReactFlow>

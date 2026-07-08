@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useStore } from "@/store";
+import PageGlow from "@/components/ui/PageGlow";
 
 export default function Login() {
   const [mode, setMode] = useState("login"); // login | register
@@ -36,8 +37,12 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center bg-base px-6 py-16">
-      <div className="w-full max-w-sm">
+    <div className="relative min-h-[calc(100vh-3.5rem)] flex items-center justify-center bg-base px-6 py-16">
+      <PageGlow
+        height={520}
+        blobs={[{ x: "50%", y: "10%", w: "70%", h: "80%", color: "rgba(124, 92, 255,0.14)" }]}
+      />
+      <div className="relative z-10 w-full max-w-sm">
         <h1 className="font-display font-semibold text-[1.75rem] text-ink text-center mb-2">
           {mode === "login" ? "Welcome back" : "Create your account"}
         </h1>

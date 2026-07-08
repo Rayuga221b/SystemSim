@@ -38,13 +38,14 @@ export default function Palette({ embedded = false }) {
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} aria-hidden />
             {cat.label}
           </h3>
-          <ul className="flex flex-col gap-1.5 px-0.5">
+          {/* Flat list rows — dot + icon + label, no card/border chrome.
+              Matches the proposed sidebar concept (design/systemsim-design-
+              portfolio.html): grouped by category, quiet until hovered. */}
+          <ul className="flex flex-col gap-0.5 px-0.5">
             {COMPONENTS.filter((c) => c.category === cat.id).map((c) => {
               const Icon = c.icon;
               return (
                 <li key={c.type}>
-                  {/* Miniature node chip: same anatomy as a canvas SystemNode —
-                      surface card, category icon tile, handle dots on the edges. */}
                   <div
                     draggable
                     onDragStart={(e) => {
@@ -59,30 +60,14 @@ export default function Palette({ embedded = false }) {
                     tabIndex={0}
                     aria-label={`Add ${c.label}`}
                     title={c.description}
-                    className="group relative flex items-center gap-2 rounded-lg bg-base/60 border border-white/[0.08] border-l-2
-                               px-2.5 py-2 cursor-grab active:cursor-grabbing
-                               hover:bg-elevated hover:border-white/[0.16] hover:-translate-y-px
-                               transition-all duration-150"
-                    style={{ borderLeftColor: `${cat.color}59` }}
+                    className="group flex items-center gap-2 rounded-lg px-2 py-[7px] cursor-grab active:cursor-grabbing
+                               hover:bg-elevated transition-colors duration-150"
                   >
-                    {/* Connection-dot hints — echoes the node handles on canvas */}
                     <span
-                      className="absolute -left-[4px] top-1/2 -translate-y-1/2 w-[7px] h-[7px] rounded-full
-                                 bg-elevated border border-indigo-400/40 opacity-0 group-hover:opacity-100
-                                 transition-opacity duration-150 pointer-events-none"
-                      aria-hidden
-                    />
-                    <span
-                      className="absolute -right-[4px] top-1/2 -translate-y-1/2 w-[7px] h-[7px] rounded-full
-                                 bg-elevated border border-indigo-400/40 opacity-0 group-hover:opacity-100
-                                 transition-opacity duration-150 pointer-events-none"
-                      aria-hidden
-                    />
-                    <span
-                      className="w-6 h-6 rounded flex items-center justify-center shrink-0"
+                      className="w-5 h-5 rounded flex items-center justify-center shrink-0"
                       style={{ backgroundColor: `${cat.color}1f` }}
                     >
-                      <Icon size={13} style={{ color: cat.color }} aria-hidden />
+                      <Icon size={12} style={{ color: cat.color }} aria-hidden />
                     </span>
                     <span className="text-[12.5px] font-medium text-ink/90 leading-tight truncate">{c.label}</span>
                     <button

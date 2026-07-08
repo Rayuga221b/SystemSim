@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Logo from "@/components/ui/Logo";
 
 const VISIBLE_MS  = 1800; // how long the splash stays fully opaque
 const FADE_OUT_S  = 0.45; // exit transition duration
@@ -34,19 +35,14 @@ export default function SplashLoader({ children }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             >
-              <span className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-[0_0_0_1px_rgba(99,102,241,0.2),0_8px_32px_rgba(0,0,0,0.6)]">
-                <img
-                  src="/logo.png"
-                  alt=""
-                  aria-hidden="true"
-                  className="w-10 h-10 object-contain"
-                />
+              <span className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-[0_0_0_1px_rgba(124,92,255,0.2),0_8px_32px_rgba(0,0,0,0.6)]">
+                <Logo size={40} pulse />
               </span>
               <span
                 className="font-display font-semibold text-[1.0625rem] tracking-tight"
                 style={{ color: "#EDEDF2" }}
               >
-                System<span style={{ color: "#818CF8" }}>Sim</span>
+                System<span style={{ color: "#9B85FF" }}>Sim</span>
               </span>
             </motion.div>
 
@@ -57,8 +53,8 @@ export default function SplashLoader({ children }) {
               transition={{ delay: 0.35, duration: 0.3 }}
               className="w-8 h-8 rounded-full animate-spin"
               style={{
-                border: "3px solid rgba(99,102,241,0.18)",
-                borderTopColor: "rgba(99,102,241,0.9)",
+                border: "3px solid rgba(124, 92, 255,0.18)",
+                borderTopColor: "rgba(124, 92, 255,0.9)",
               }}
               aria-label="Loading"
               role="status"

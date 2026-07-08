@@ -8,6 +8,7 @@ import { ArrowRight, RefreshCw } from "lucide-react";
 import { api } from "@/api/client";
 import { DIFFICULTIES, DIFFICULTY_BADGE } from "@/data/constants";
 import BrandIcon from "@/components/ui/BrandIcon";
+import PageGlow from "@/components/ui/PageGlow";
 
 // Brand accent colors for card accents
 export const BRAND_COLOR = {
@@ -28,7 +29,7 @@ const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 // ─── Lead story (№ 01) — big editorial typography ────────────────────────────
 
 function LeadStory({ cs }) {
-  const color = BRAND_COLOR[cs.company] ?? "#6366F1";
+  const color = BRAND_COLOR[cs.company] ?? "#7C5CFF";
   return (
     <Link
       to={`/case-studies/${cs.slug}`}
@@ -77,7 +78,7 @@ function LeadStory({ cs }) {
 // ─── Second feature (№ 02) — smaller, still display-set ─────────────────────
 
 function SecondFeature({ cs }) {
-  const color = BRAND_COLOR[cs.company] ?? "#6366F1";
+  const color = BRAND_COLOR[cs.company] ?? "#7C5CFF";
   return (
     <Link
       to={`/case-studies/${cs.slug}`}
@@ -108,7 +109,7 @@ function SecondFeature({ cs }) {
 // ─── Index row (№ 03+) — a line in the table of contents, not a box ─────────
 
 function IndexRow({ cs, rank }) {
-  const color = BRAND_COLOR[cs.company] ?? "#6366F1";
+  const color = BRAND_COLOR[cs.company] ?? "#7C5CFF";
   return (
     <Link
       to={`/case-studies/${cs.slug}`}
@@ -173,8 +174,12 @@ export default function CaseStudies() {
   const [lead, second, ...rest] = filtered;
 
   return (
-    <div className="bg-base min-h-screen">
-      <div className="max-w-5xl mx-auto px-6">
+    <div className="relative bg-base min-h-screen">
+      <PageGlow blobs={[
+        { x: "18%", y: "0%",  w: "55%", h: "65%", color: "rgba(124, 92, 255,0.16)" },
+        { x: "88%", y: "8%",  w: "42%", h: "52%", color: "rgba(56,189,248,0.09)" },
+      ]} />
+      <div className="relative z-10 max-w-5xl mx-auto px-6">
 
         {/* Header */}
         <div className="py-16 sm:py-20 border-b border-white/[0.05]">
@@ -183,7 +188,7 @@ export default function CaseStudies() {
           </p>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
             <div>
-              <h1 className="font-display font-semibold text-4xl sm:text-5xl text-ink mb-3">
+              <h1 className="font-display font-semibold text-4xl sm:text-5xl mb-3 bg-gradient-to-r from-white via-white to-indigo-300 bg-clip-text text-transparent">
                 Case Studies
               </h1>
               <p className="text-muted text-[0.9375rem] max-w-[52ch] leading-relaxed">

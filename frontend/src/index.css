@@ -10,7 +10,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid #6366F1;
+    outline: 2px solid #7C5CFF;
     outline-offset: 3px;
     border-radius: 4px;
   }
@@ -18,13 +18,13 @@
 
 @layer utilities {
   .dot-grid {
-    background-image: radial-gradient(circle, rgba(99, 102, 241, 0.14) 1px, transparent 1px);
+    background-image: radial-gradient(circle, rgba(124, 92, 255, 0.14) 1px, transparent 1px);
     background-size: 28px 28px;
   }
 
   /* CTA buttons only — never on text */
   .btn-primary {
-    background: linear-gradient(135deg, #6366F1, #818CF8);
+    background: linear-gradient(135deg, #7C5CFF, #9B85FF);
   }
   .btn-primary:hover {
     opacity: 0.9;
@@ -39,12 +39,15 @@
 /* ─── Canvas (React Flow) ─────────────────────────────────────────────────── */
 
 /* The build area reads as its own material: slightly lifted, indigo-tinted,
-   with a soft center glow — panels stay flat `surface`, page stays `base`. */
+   with a soft ambient glow — same two-tone indigo/violet burst as the
+   homepage's closing "Ready to think in systems?" section, dialed down so
+   nodes and edges stay legible. Panels stay flat `surface`, page stays `base`. */
 .canvas-surface {
   background:
-    radial-gradient(1100px 620px at 50% 32%, rgba(99, 102, 241, 0.055) 0%, transparent 60%),
+    radial-gradient(1400px 820px at 50% 28%, rgba(124, 92, 255, 0.10) 0%, transparent 60%),
+    radial-gradient(1000px 760px at 82% 78%, rgba(139, 92, 246, 0.08) 0%, transparent 62%),
     linear-gradient(180deg, #0e0e18 0%, #0b0b12 100%);
-  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.06),
+  box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.06),
               inset 0 1px 24px rgba(0, 0, 0, 0.45);
 }
 
@@ -82,7 +85,7 @@
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: rgba(129, 140, 248, 0.9);
+  stroke: rgba(155, 133, 255, 0.9);
 }
 
 .react-flow__attribution {
@@ -105,6 +108,7 @@
   .animate-marquee,
   .animate-marquee-smooth,
   .animate-fade-up,
+  .animate-logo-pulse,
   .edge-flow,
   [class*="card-breathe"] {
     animation: none !important;

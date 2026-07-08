@@ -57,7 +57,7 @@ export const PHASES = [
     id: "high-level",
     label: "High-level design",
     minutes: 15,
-    color: "#818CF8", // indigo-400
+    color: "#9B85FF", // indigo-400
     goal: "A complete, working end-to-end system on the board. Boring is correct at this stage.",
     do: [
       "Start with client → load balancer → app servers → database. Earn every addition after that.",
