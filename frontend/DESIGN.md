@@ -134,3 +134,58 @@ several pieces of it folded into the real app:
 - Challenge brief (`ChallengePlay.jsx`) restructured around a Problem /
   Solution two-card pattern, echoing `CaseStudyDetail.jsx`'s existing
   Problem → Solution structure.
+
+**Learn platform + code-reading polish — DECISION (2026-07-16):** The Learn
+area became the product's front door, and lesson code needed to read like real
+code. Changes, with the reasoning worth being able to speak to:
+
+- **Information architecture: Learn is now the entry point.** Navbar order is
+  `Learn → Sandbox → Challenges → Case Studies → Dashboard` (Learn moved ahead
+  of Sandbox). Interview prep is no longer a top-level nav item — it moved
+  *under* Learn at `/learn/interview`, reached from a link-card on the Learn
+  page. Old `/interview` links `<Navigate replace>` to the new path so nothing
+  breaks. WHY: the site is a structured learning platform now, not just a
+  simulator; the nav should lead with the library, and interview prep is one
+  facet of learning, not a peer pillar.
+- **Markdown lesson renderer (`components/ui/Markdown.jsx`) is the one place
+  long-form lessons are styled.** It maps every GFM element to design tokens
+  (kept separate from `Prose.jsx`, which only handles flat bold/italic/inline
+  paragraphs). Two code-block treatments, chosen by fence language:
+  - **Syntax-highlighted blocks** (```` ```sql ````, `js`, `json`, …) use the
+    **VS Code "Dark+" theme** via `rehype-highlight` + `highlight.js/styles/
+    vs2015.css`. The custom `code` renderer passes `className` (`hljs
+    language-…`) and children through untouched so the theme's token `<span>`s
+    survive; the wrapper only owns the `#0b0a14` chrome. GOTCHA to remember:
+    the plugin must be wired as `rehypePlugins={[rehypeHighlight]}` on
+    `<ReactMarkdown>` — importing it isn't enough (that bug shipped briefly and
+    left code uncolored).
+  - **Language-less fences** (```` ``` ````) are treated as CLI/terminal
+    sessions and get **terminal chrome**: mac-style red/amber/green dot row, a
+    "terminal" label, an indigo left-accent, and a darker `#060510` canvas —
+    visibly distinct from syntax blocks. WHY: command output and shell sessions
+    shouldn't look identical to source code.
+- **New dependency: `rehype-highlight`** (bundles `highlight.js`). Flagged per
+  repo rules — it's a remark/rehype markdown plugin, not a second UI kit, so it
+  doesn't violate "Tailwind + shadcn only." Kept scoped to `Markdown.jsx`.
+- **Roadmap sidebar (`RoadmapLesson.jsx`) is collapsible per module.** Each
+  module is a dropdown; only the module containing the active lesson is open by
+  default. WHY: a flat list of ~30+ lessons was a wall of options. The green
+  "read" tick was removed from the sidebar (day numbers always show) — progress
+  ticks cluttered navigation; localStorage read-tracking still exists but is no
+  longer surfaced there.
+- **Lesson/chapter subheadings recolored** to the indigo accent (`Markdown.jsx`
+  h2→indigo-200, h3→indigo-300; `Learn.jsx` chapter-modal headings tinted to
+  each chapter's accent) so structure is scannable against serif body text.
+- **Learn header stat is a static "76 Articles"** (was a `read/total`
+  progress counter). WHY: a marketing/scale signal reads stronger on a landing
+  surface than a personal-progress fraction. NOTE: the curriculum defines 76
+  lessons but only 31 are ingested in the DB today, so the roadmap block still
+  says "Start the 31-lesson roadmap" — the two numbers are intentionally
+  different (headline vs. live count); reconcile if that ever confuses.
+- **Home page reframed around the platform.** Hero is "Learn. Design.
+  Simulate." with a secondary CTA into the Library (replaced "Browse Case
+  Studies"). A new structured-path section sits between the company carousel and
+  the components showcase, anchored by an original inline-SVG roadmap diagram
+  (`components/home/LearnPathDiagram.jsx` — self-contained, no external asset).
+  "Who uses SystemSim" and the (now) "Four ways to learn" grid were rewritten to
+  include the self-study roadmap as a first-class pillar.
