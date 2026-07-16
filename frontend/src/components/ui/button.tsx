@@ -10,8 +10,8 @@ const buttonVariants = cva(
       variant: {
         default:     "bg-indigo-500 text-white hover:bg-indigo-600",
         destructive: "bg-red-500 text-white hover:bg-red-600",
-        outline:     "border border-white/10 bg-elevated text-muted hover:bg-white/[0.05] hover:text-ink",
-        secondary:   "bg-elevated text-ink hover:bg-white/[0.06]",
+        outline:     "border border-hairline/10 bg-elevated text-muted hover:bg-hairline/[0.05] hover:text-ink",
+        secondary:   "bg-elevated text-ink hover:bg-hairline/[0.06]",
         ghost:       "hover:bg-elevated hover:text-ink text-muted",
         link:        "text-indigo-400 underline-offset-4 hover:underline p-0",
       },

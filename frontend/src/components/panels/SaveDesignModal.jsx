@@ -47,7 +47,7 @@ export default function SaveDesignModal({ mode = "sandbox" }) {
       aria-modal="true"
       aria-label="Save design"
     >
-      <div className="w-[380px] bg-surface border border-white/[0.09] rounded-xl p-5 shadow-2xl shadow-black/50">
+      <div className="w-[380px] bg-surface border border-hairline/[0.09] rounded-xl p-5 shadow-2xl shadow-black/50">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[15px] font-medium text-ink">Save design</h2>
           <button type="button" onClick={close} className="text-muted hover:text-ink p-1 -m-1" aria-label="Close">
@@ -79,7 +79,7 @@ export default function SaveDesignModal({ mode = "sandbox" }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. URL shortener v2 — with cache"
-              className="w-full bg-elevated border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-ink
+              className="w-full bg-elevated border border-hairline/[0.08] rounded-lg px-3 py-2 text-[13px] text-ink
                          placeholder:text-muted/60 outline-none focus:border-indigo-500/60"
               aria-label="Design title"
             />

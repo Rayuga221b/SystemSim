@@ -7,11 +7,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  AlertTriangle, ArrowRight, Check, CheckCircle2, ClipboardCheck, Copy,
-  Dumbbell, ListChecks, MessageSquareQuote, Quote, ShieldAlert, Target,
+  AlertTriangle, ArrowRight, Check, CheckCircle2, ClipboardCheck,
+  Dumbbell, ListChecks, Quote, ShieldAlert, Target,
 } from "lucide-react";
 import {
-  INTERVIEW_MINUTES, PHASES, SIGNALS, MISTAKES, DRILLS, PLAN, PHRASES,
+  INTERVIEW_MINUTES, PHASES, SIGNALS, MISTAKES, DRILLS, PLAN,
 } from "@/data/interview";
 
 const PLAN_KEY = "systemsim_interview_plan";
@@ -32,7 +32,6 @@ const ACCENT = {
   mistakes: "#FBBF24",  // amber — failure modes (kept warning-colored)
   drills:   "#A78BFA",  // violet — practice exercises
   plan:     "#34D399",  // emerald — the two-week plan
-  phrases:  "#F472B6",  // pink — the phrase bank
 };
 
 // Soft, blurred color bloom anchored to a section — purely decorative.
@@ -100,7 +99,7 @@ function PhaseTimeline() {
       <div
         id="phase-detail"
         role="tabpanel"
-        className="mt-5 sm:mt-4 bg-surface border border-white/[0.07] rounded-xl p-5 sm:p-6"
+        className="mt-5 sm:mt-4 bg-surface border border-hairline/[0.07] rounded-xl p-5 sm:p-6"
         style={{ borderTopColor: `${active.color}66`, borderTopWidth: 2 }}
       >
         <div className="flex items-baseline gap-3 flex-wrap mb-2">
@@ -137,42 +136,6 @@ function PhaseTimeline() {
         </p>
       </div>
     </div>
-  );
-}
-
-/* ------------------------------------------------------------- phrase item */
-
-function PhraseLine({ text }) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      /* clipboard unavailable — no-op */
-    }
-  };
-
-  return (
-    <li className="group flex items-start gap-3 border-b border-white/[0.05] last:border-b-0 py-3">
-      <span className="flex-1 text-[0.875rem] text-ink/85 leading-relaxed max-w-[64ch]">
-        “{text}”
-      </span>
-      <button
-        type="button"
-        onClick={copy}
-        aria-label={copied ? "Copied" : "Copy phrase"}
-        className={`shrink-0 mt-0.5 rounded p-1.5 transition-colors ${
-          copied
-            ? "text-emerald-400"
-            : "text-muted/40 hover:text-pink-300 hover:bg-elevated"
-        }`}
-      >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
-      </button>
-    </li>
   );
 }
 
@@ -214,7 +177,7 @@ export default function InterviewPrep() {
       <div className="relative z-10 max-w-4xl mx-auto px-6">
 
         {/* ------------------------------------------------------- header */}
-        <div className="py-16 sm:py-20 border-b border-white/[0.05]">
+        <div className="py-16 sm:py-20 border-b border-hairline/[0.05]">
           <p className="font-mono text-xs text-indigo-400 tracking-[0.14em] uppercase mb-4">
             Interview Prep
           </p>
@@ -246,9 +209,9 @@ export default function InterviewPrep() {
         </div>
 
         {/* ----------------------------------------------------- timeline */}
-        <section className="relative pt-10 pb-14 border-b border-white/[0.05]">
+        <section className="relative pt-10 pb-14 border-b border-hairline/[0.05]">
           <Glow color={ACCENT.timeline} className="-top-20 right-0 w-[380px] h-[380px]" />
-          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.15rem] text-ink mb-1">
+          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.275rem] text-ink mb-1">
             <Target size={15} style={{ color: ACCENT.timeline }} aria-hidden /> The 45 minutes, mapped
           </h2>
           <p className="relative text-muted text-[0.875rem] mb-6 max-w-[58ch]">
@@ -259,9 +222,9 @@ export default function InterviewPrep() {
         </section>
 
         {/* ------------------------------------------------------ signals */}
-        <section className="relative pt-12 pb-14 border-b border-white/[0.05]">
+        <section className="relative pt-12 pb-14 border-b border-hairline/[0.05]">
           <Glow color={ACCENT.signals} className="-top-16 right-0 w-[420px] h-[420px]" />
-          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.15rem] text-ink mb-1">
+          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.275rem] text-ink mb-1">
             <ClipboardCheck size={15} style={{ color: ACCENT.signals }} aria-hidden /> What they're actually grading
           </h2>
           <p className="relative text-muted text-[0.875rem] mb-6 max-w-[58ch]">
@@ -275,13 +238,13 @@ export default function InterviewPrep() {
               return (
                 <article
                   key={s.id}
-                  className="bg-surface border border-white/[0.07] rounded-xl p-5 hover:border-sky-500/30 transition-colors duration-150"
+                  className="bg-surface border border-hairline/[0.07] rounded-xl p-5 hover:border-sky-500/30 transition-colors duration-150"
                 >
                   <h3 className="flex items-center gap-2 font-display font-semibold text-ink text-[0.9375rem] mb-2">
                     <Icon size={15} style={{ color: ACCENT.signals }} aria-hidden /> {s.title}
                   </h3>
                   <p className="text-[0.8125rem] text-muted leading-relaxed mb-4">{s.blurb}</p>
-                  <dl className="flex flex-col gap-2 border-t border-white/[0.05] pt-3.5">
+                  <dl className="flex flex-col gap-2 border-t border-hairline/[0.05] pt-3.5">
                     {[
                       ["mid", "MID"],
                       ["senior", "SR"],
@@ -302,9 +265,9 @@ export default function InterviewPrep() {
         </section>
 
         {/* ----------------------------------------------------- mistakes */}
-        <section className="relative pt-12 pb-14 border-b border-white/[0.05]">
+        <section className="relative pt-12 pb-14 border-b border-hairline/[0.05]">
           <Glow color={ACCENT.mistakes} className="-top-16 right-0 w-[400px] h-[400px]" />
-          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.15rem] text-ink mb-1">
+          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.275rem] text-ink mb-1">
             <ShieldAlert size={15} className="text-amber-400" aria-hidden /> The seven deadly mistakes
           </h2>
           <p className="relative text-muted text-[0.875rem] mb-6 max-w-[58ch]">
@@ -314,7 +277,7 @@ export default function InterviewPrep() {
 
           <div className="relative flex flex-col">
             {MISTAKES.map((m, i) => (
-              <div key={m.id} className="group flex gap-4 border-b border-white/[0.05] last:border-b-0 py-5 pl-3 -ml-3 rounded-lg hover:bg-amber-500/[0.03] transition-colors duration-150">
+              <div key={m.id} className="group flex gap-4 border-b border-hairline/[0.05] last:border-b-0 py-5 pl-3 -ml-3 rounded-lg hover:bg-amber-500/[0.03] transition-colors duration-150">
                 <span className="font-mono text-[11px] text-amber-400/70 mt-1 shrink-0 w-6">
                   {String(i + 1).padStart(2, "0")}
                 </span>
@@ -340,9 +303,9 @@ export default function InterviewPrep() {
         </section>
 
         {/* ------------------------------------------------------- drills */}
-        <section className="relative pt-12 pb-14 border-b border-white/[0.05]">
+        <section className="relative pt-12 pb-14 border-b border-hairline/[0.05]">
           <Glow color={ACCENT.drills} className="-top-16 right-0 w-[420px] h-[420px]" />
-          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.15rem] text-ink mb-1">
+          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.275rem] text-ink mb-1">
             <Dumbbell size={15} style={{ color: ACCENT.drills }} aria-hidden /> Practice with intent
           </h2>
           <p className="relative text-muted text-[0.875rem] mb-6 max-w-[58ch]">
@@ -356,7 +319,7 @@ export default function InterviewPrep() {
               return (
                 <article
                   key={d.id}
-                  className="group bg-surface border border-white/[0.07] rounded-xl p-5 flex flex-col hover:border-violet-500/30 transition-colors duration-150"
+                  className="group bg-surface border border-hairline/[0.07] rounded-xl p-5 flex flex-col hover:border-violet-500/30 transition-colors duration-150"
                 >
                   <h3 className="flex items-center gap-2 font-display font-semibold text-ink text-[0.9375rem] mb-2">
                     <span className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
@@ -378,10 +341,10 @@ export default function InterviewPrep() {
         </section>
 
         {/* ---------------------------------------------------- prep plan */}
-        <section className="relative pt-12 pb-14 border-b border-white/[0.05]">
+        <section className="relative pt-12 pb-14 border-b border-hairline/[0.05]">
           <Glow color={ACCENT.plan} className="-top-16 right-0 w-[400px] h-[400px]" />
           <div className="relative flex items-end justify-between gap-4 mb-1">
-            <h2 className="flex items-center gap-2 font-display font-semibold text-[1.15rem] text-ink">
+            <h2 className="flex items-center gap-2 font-display font-semibold text-[1.275rem] text-ink">
               <ListChecks size={15} style={{ color: ACCENT.plan }} aria-hidden /> The two-week plan
             </h2>
             <p className="font-mono text-[11px] text-muted/60 shrink-0">
@@ -396,7 +359,7 @@ export default function InterviewPrep() {
 
           <div className="relative grid sm:grid-cols-2 gap-3 items-start">
             {PLAN.map((week) => (
-              <div key={week.id} className="bg-surface border border-white/[0.07] rounded-xl p-5 hover:border-emerald-500/25 transition-colors duration-150">
+              <div key={week.id} className="bg-surface border border-hairline/[0.07] rounded-xl p-5 hover:border-emerald-500/25 transition-colors duration-150">
                 <h3 className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-emerald-300/80 mb-4">
                   {week.label}
                 </h3>
@@ -414,7 +377,7 @@ export default function InterviewPrep() {
                           className={`shrink-0 mt-0.5 w-[18px] h-[18px] rounded flex items-center justify-center border transition-colors ${
                             checked
                               ? "bg-emerald-500/15 border-emerald-500/50 text-emerald-400"
-                              : "border-white/[0.15] text-transparent hover:border-emerald-400/60"
+                              : "border-hairline/[0.15] text-transparent hover:border-emerald-400/60"
                           }`}
                         >
                           <Check size={12} strokeWidth={3} />
@@ -439,33 +402,6 @@ export default function InterviewPrep() {
           </div>
         </section>
 
-        {/* -------------------------------------------------- phrase bank */}
-        <section className="relative pt-12 pb-6">
-          <Glow color={ACCENT.phrases} className="-top-16 right-0 w-[400px] h-[400px]" />
-          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.15rem] text-ink mb-1">
-            <MessageSquareQuote size={15} style={{ color: ACCENT.phrases }} aria-hidden /> The phrase bank
-          </h2>
-          <p className="relative text-muted text-[0.875rem] mb-6 max-w-[58ch]">
-            Strong candidates sound a particular way: they commit, they price their tradeoffs,
-            they check in. Steal these lines until your own versions show up.
-          </p>
-
-          <div className="relative">
-            {PHRASES.map((g) => (
-              <div key={g.group} className="mb-7 last:mb-0">
-                <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] mb-1" style={{ color: `${ACCENT.phrases}b3` }}>
-                  {g.group}
-                </h3>
-                <ul>
-                  {g.items.map((t) => (
-                    <PhraseLine key={t} text={t} />
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* ---------------------------------------------------------- CTA */}
         <section className="relative mt-6 mb-24 rounded-xl border border-indigo-500/25 overflow-hidden p-6 sm:p-8">
           <div
@@ -479,7 +415,7 @@ export default function InterviewPrep() {
               ].join(", "),
             }}
           />
-          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.15rem] text-ink mb-2">
+          <h2 className="relative flex items-center gap-2 font-display font-semibold text-[1.275rem] text-ink mb-2">
             <CheckCircle2 size={16} className="text-indigo-400" aria-hidden /> The interview rewards reps, not reading
           </h2>
           <p className="relative text-[0.875rem] text-muted leading-relaxed mb-5 max-w-[58ch]">
@@ -493,7 +429,7 @@ export default function InterviewPrep() {
             </Link>
             <Link
               to="/sandbox"
-              className="inline-flex items-center gap-2 text-[13.5px] font-medium text-ink border border-white/[0.1] rounded-lg px-5 py-2.5 hover:bg-elevated hover:border-indigo-500/35 transition-colors"
+              className="inline-flex items-center gap-2 text-[13.5px] font-medium text-ink border border-hairline/[0.1] rounded-lg px-5 py-2.5 hover:bg-elevated hover:border-indigo-500/35 transition-colors"
             >
               Warm up in the sandbox
             </Link>

@@ -35,9 +35,9 @@ export default function LearnDrawer() {
       aria-modal="true"
       aria-label={`About ${comp.label}`}
     >
-      <div className="w-[440px] max-w-full h-full bg-surface border-l border-white/[0.08] overflow-y-auto">
+      <div className="w-[440px] max-w-full h-full bg-surface border-l border-hairline/[0.08] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-surface/95 backdrop-blur border-b border-white/[0.06] px-6 py-4 flex items-center gap-3">
+        <div className="sticky top-0 bg-surface/95 backdrop-blur border-b border-hairline/[0.06] px-6 py-4 flex items-center gap-3">
           <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}1a` }}>
             <Icon size={17} style={{ color }} aria-hidden />
           </span>
@@ -104,7 +104,7 @@ export default function LearnDrawer() {
 
 function Section({ icon: Icon, title, color, children }) {
   return (
-    <section className="border-t border-white/[0.04] pt-5 first:border-0 first:pt-0">
+    <section className="border-t border-hairline/[0.04] pt-5 first:border-0 first:pt-0">
       <h3 className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted/80 mb-2">
         <Icon size={12} style={{ color }} aria-hidden /> {title}
       </h3>

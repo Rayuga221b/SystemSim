@@ -1,15 +1,25 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: ["class"],
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        base:     "#0B0E14",
-        surface:  "#12161F",
-        elevated: "#1A2030",
-        dim:      "#262E42",
-        ink:      "#F3F5FA",
-        muted:    "#8D97B0",
+        // Neutral chrome tokens are CSS-var-backed (see index.css :root /
+        // .light) so light/dark mode repaints every `bg-base`, `text-ink`,
+        // etc. usage app-wide with zero per-component edits. The
+        // `rgb(var(--x) / <alpha-value>)` form keeps Tailwind's opacity
+        // modifiers (bg-surface/50 etc.) working.
+        base:     "rgb(var(--color-base) / <alpha-value>)",
+        surface:  "rgb(var(--color-surface) / <alpha-value>)",
+        elevated: "rgb(var(--color-elevated) / <alpha-value>)",
+        dim:      "rgb(var(--color-dim) / <alpha-value>)",
+        ink:      "rgb(var(--color-ink) / <alpha-value>)",
+        muted:    "rgb(var(--color-muted) / <alpha-value>)",
+        // Theme-flipping replacement for the old habit of using white/[alpha]
+        // as a hairline border / hover wash on the dark bg: white in dark
+        // mode, near-ink in light mode — same translucency, correct theme.
+        hairline: "rgb(var(--color-hairline) / <alpha-value>)",
         // Second brand accent — "healthy / simulating" semantic only.
         // Never decorative; see DESIGN.md "Visual rebrand" note.
         mint:     "#34E2A1",
@@ -19,15 +29,44 @@ export default {
         indigo: {
           50:  "#F4F1FF",
           100: "#EAE3FF",
-          200: "#D6C9FF",
-          300: "#B6A6FF",
-          400: "#9B85FF",
+          // 200/300/400 are the light, washed-out steps of the scale — used
+          // throughout as link/label/emphasis text (not just backgrounds).
+          // On the dark bg they're comfortably light-on-dark; on a light bg
+          // that same lightness reads as low-contrast lavender-on-white
+          // (~1.5–2.8:1, fails WCAG AA). CSS-var-backed so `.light` can swap
+          // in darker, readable steps from the same scale — every existing
+          // `text-indigo-300` etc. usage (30+ call sites) repaints for free.
+          200: "rgb(var(--color-indigo-200) / <alpha-value>)",
+          300: "rgb(var(--color-indigo-300) / <alpha-value>)",
+          400: "rgb(var(--color-indigo-400) / <alpha-value>)",
           500: "#7C5CFF",
           600: "#6A45F0",
           700: "#5935C9",
           800: "#4629A0",
           900: "#37217D",
           950: "#221454",
+        },
+        // Same problem, same fix, for the status-color scales used as text
+        // (warning/bottleneck, healthy, info, error/failed) — Tailwind's
+        // stock 300/400 steps are pastel-light, unreadable on a light bg.
+        // Only the shades actually used as `text-*` need overriding; the
+        // rest of each scale (backgrounds/borders) is untouched.
+        amber: {
+          300: "rgb(var(--color-amber-300) / <alpha-value>)",
+          400: "rgb(var(--color-amber-400) / <alpha-value>)",
+        },
+        emerald: {
+          300: "rgb(var(--color-emerald-300) / <alpha-value>)",
+          400: "rgb(var(--color-emerald-400) / <alpha-value>)",
+        },
+        sky: {
+          300: "rgb(var(--color-sky-300) / <alpha-value>)",
+          400: "rgb(var(--color-sky-400) / <alpha-value>)",
+        },
+        red: {
+          300: "rgb(var(--color-red-300) / <alpha-value>)",
+          400: "rgb(var(--color-red-400) / <alpha-value>)",
+          500: "rgb(var(--color-red-500) / <alpha-value>)",
         },
       },
       fontFamily: {

@@ -126,8 +126,8 @@ export default function ChallengePlay() {
     <ReactFlowProvider>
       <div className="h-[calc(100vh-3.5rem)] flex bg-base overflow-hidden">
         {/* Left: brief / build */}
-        <aside className="w-[280px] shrink-0 h-full border-r border-white/[0.06] bg-surface/95 flex flex-col">
-          <div className="flex border-b border-white/[0.06]" role="tablist">
+        <aside className="w-[280px] shrink-0 h-full border-r border-hairline/[0.06] bg-surface/95 flex flex-col">
+          <div className="flex border-b border-hairline/[0.06]" role="tablist">
             <LeftTab active={leftTab === "brief"} onClick={() => setLeftTab("brief")}>
               <ClipboardList size={12} aria-hidden /> Brief
             </LeftTab>
@@ -213,13 +213,13 @@ export default function ChallengePlay() {
                   )}
 
                   {/* Solution escape hatch — always reachable, never pushed */}
-                  <div className="mt-2 pt-4 border-t border-white/[0.05]">
+                  <div className="mt-2 pt-4 border-t border-hairline/[0.05]">
                     {solutionNote ? (
                       <p className="text-[11.5px] text-muted leading-relaxed border-l-2 border-indigo-500/40 pl-2.5">
                         Reference architecture loaded on the canvas. {solutionNote}
                       </p>
                     ) : peekConfirm ? (
-                      <div className="rounded-lg border border-white/[0.08] bg-elevated/60 p-3">
+                      <div className="rounded-lg border border-hairline/[0.08] bg-elevated/60 p-3">
                         <p className="text-[11.5px] text-muted leading-relaxed mb-2.5">
                           This replaces your canvas with the reference architecture. You learn more by trying first — but studying a good answer beats staying stuck.
                         </p>
@@ -227,7 +227,7 @@ export default function ChallengePlay() {
                           <button
                             type="button"
                             onClick={showSolution}
-                            className="flex-1 flex items-center justify-center gap-1.5 text-[12px] font-medium text-ink bg-white/[0.06] hover:bg-white/[0.1] rounded-md px-2.5 py-1.5"
+                            className="flex-1 flex items-center justify-center gap-1.5 text-[12px] font-medium text-ink bg-hairline/[0.06] hover:bg-hairline/[0.1] rounded-md px-2.5 py-1.5"
                           >
                             <Eye size={12} /> Show it
                           </button>
@@ -257,7 +257,7 @@ export default function ChallengePlay() {
 
           {/* Submit — always visible while briefing */}
           {challenge && !attempt && (
-            <div className="p-3 border-t border-white/[0.06]">
+            <div className="p-3 border-t border-hairline/[0.06]">
               {submitError && <p className="text-[11px] text-red-400 mb-2">{submitError}</p>}
               <button
                 type="button"
@@ -292,8 +292,8 @@ export default function ChallengePlay() {
 
         {/* Right: inspect / results */}
         {(selectedNode || simResult) && (
-          <aside className="w-[300px] shrink-0 h-full border-l border-white/[0.06] bg-surface/95 flex flex-col">
-            <div className="flex border-b border-white/[0.06]" role="tablist">
+          <aside className="w-[300px] shrink-0 h-full border-l border-hairline/[0.06] bg-surface/95 flex flex-col">
+            <div className="flex border-b border-hairline/[0.06]" role="tablist">
               <LeftTab active={rightTab === "inspect"} onClick={() => setRightTab("inspect")} disabled={!selectedNode}>
                 <MousePointerClick size={12} aria-hidden /> Inspect
               </LeftTab>
@@ -381,7 +381,7 @@ function AttemptResult({ attempt, onRetry, onShowSolution, solutionNote, isNewBe
               </h3>
               <ul className="flex flex-col gap-1.5">
                 {items.map((f, i) => (
-                  <li key={i} className="text-[12px] text-ink/80 leading-relaxed border-l-2 border-white/[0.08] pl-2.5">
+                  <li key={i} className="text-[12px] text-ink/80 leading-relaxed border-l-2 border-hairline/[0.08] pl-2.5">
                     {f}
                   </li>
                 ))}
@@ -405,7 +405,7 @@ function AttemptResult({ attempt, onRetry, onShowSolution, solutionNote, isNewBe
           Reference architecture loaded on the canvas. {solutionNote}
         </p>
       ) : confirmingSolution ? (
-        <div className="mt-4 rounded-lg border border-white/[0.08] bg-elevated/60 p-3">
+        <div className="mt-4 rounded-lg border border-hairline/[0.08] bg-elevated/60 p-3">
           <p className="text-[11.5px] text-muted leading-relaxed mb-2.5">
             This replaces your canvas with the reference architecture. Your score is already saved.
           </p>
@@ -414,7 +414,7 @@ function AttemptResult({ attempt, onRetry, onShowSolution, solutionNote, isNewBe
               type="button"
               onClick={revealSolution}
               disabled={loadingSolution}
-              className="flex-1 flex items-center justify-center gap-1.5 text-[12px] font-medium text-ink bg-white/[0.06] hover:bg-white/[0.1] rounded-md px-2.5 py-1.5 disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-1.5 text-[12px] font-medium text-ink bg-hairline/[0.06] hover:bg-hairline/[0.1] rounded-md px-2.5 py-1.5 disabled:opacity-50"
             >
               {loadingSolution ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />}
               Show it

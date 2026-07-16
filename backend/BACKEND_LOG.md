@@ -238,3 +238,79 @@ adopted their two best ideas in a way that keeps our simulate-first identity.
 - [ ] `POST /admin/ingest` case-study scraper pipeline (stub; content is curated JSON for now)
 - [ ] Rate limiting on `/simulate` and `/ai/*` before public deploy
 - [ ] `simulation_logs` table (spec) — deliberately skipped until there's a use for it
+
+---
+
+## 2026-07-16 — Learn Roadmap (long-form guided track)
+
+Added a 76-lesson "System Design Roadmap" reachable from the Learn page
+(`/learn/roadmap`, `/learn/roadmap/:slug`). A docs-style reader (sidebar +
+prose + prev/next), populated from the DB.
+
+### 1. Content lives in the DB, not JSON — the deliberate exception
+
+Challenges/case-studies are JSON (project rule). The roadmap is **not**: it's
+76+ long-form lessons that will grow and want per-lesson queries, published
+state, and later per-user progress. New table `roadmap_lessons`
+(`models/roadmap_lesson.py`) — `day` (unique), `slug`, `module`, `title`,
+`summary`, `body_md`, `key_takeaways` (JSON), `interview_angle`, `tags`,
+`diagram_refs`, `published`, timestamps. Created via `create_all` (SQLite dev)
+like the rest; Alembic revision still owed before Postgres (see checklist).
+
+### 2. Copyright-safe ingestion — same principle as case studies
+
+Source material is a third-party series (Sunchit Dudeja) with **no license**
+(all rights reserved). So we do NOT store/serve it verbatim. `services/
+roadmap_ingest.py` fetches a source doc as *reference only* (cached to a
+gitignored dir, never committed) and asks Claude to produce an **original,
+restructured** lesson — mirrors the existing "AI-structured summaries, never
+raw scraped HTML" decision. Run: `python -m services.roadmap_ingest --days 1-7
+--publish` (needs `ANTHROPIC_API_KEY`; degrades to AIUnavailable otherwise).
+
+### 3. Curriculum manifest vs. content
+
+`data/roadmap_curriculum.json` = ordering/grouping config (11 modules, day→
+module map, accent colors). It's presentation config, not served content, so
+JSON is fine. `services/roadmap.py` joins it with DB rows for the grouped
+overview and computes prev/next along the reading order (skipping unpublished).
+
+### 4. Routes + static
+
+`routes/roadmap.py`: `GET /roadmap` (module-grouped cards) and
+`GET /roadmap/{slug}` (full lesson + prev/next). Published-only. Mounted
+`/static` for pre-rendered diagram SVGs (ingest artifact; dir gitignored).
+
+### 5. Seeded content
+
+`scripts/seed_roadmap.py` publishes the 7 Foundations lessons as hand-authored
+originals (no API key needed) — also the quality bar for pipeline output.
+Remaining 10 modules show "soon" until ingested.
+
+### 6. Provider swap for ingest — Gemini, not Claude (2026-07-16)
+
+We had a Gemini key, not an Anthropic one. DECISION: the roadmap ingest uses
+**Gemini** via a small isolated provider (`services/gemini.py`, REST over
+urllib, no new SDK). The in-app AI features (explain/mentor) stay on Claude —
+this swap is scoped to the one-time content batch only. Model id lives in ONE
+place: `GEMINI_MODEL` env (currently `gemini-3.5-flash`; `gemini-2.5-flash` is
+blocked for new API projects). Two things that mattered:
+  - **Structured output** (`responseSchema` in generationConfig) — without it,
+    the big multi-line `body_md` string comes back with raw newlines and breaks
+    `json.loads`. The schema guarantees valid, escaped JSON.
+  - **Retry/backoff** on 429/500/503 in `_post` — the free tier throttles hard.
+
+Diagrams: authored by hand as original SVGs under `static/roadmap/diagrams/`
+(the source's `.excalidraw` files are third-party/unlicensed, same as the text),
+stitched into lessons by day via `scripts/attach_diagrams.py`.
+
+INGEST STATUS (2026-07-16): 31/76 published — Foundations + Databases + Caching
++ Traffic/APIs complete, Messaging 1/7, rest pending. Batch stopped on Gemini's
+**daily free-tier quota** (HTTP 429, not a bug). Resume with
+`python -m scripts.ingest_remaining` once quota resets (~24h) or billing is on;
+it only touches unpublished days, then run `attach_diagrams` again.
+
+TODO:
+- [ ] Finish ingest: 45 lessons remain (`python -m scripts.ingest_remaining`) — blocked on Gemini daily quota
+- [ ] Diagram pre-render step (.excalidraw → SVG) — superseded: we author original SVGs instead
+- [ ] Alembic revision for `roadmap_lessons` before Postgres deploy
+- [ ] Optional: per-user lesson progress table (currently localStorage only)

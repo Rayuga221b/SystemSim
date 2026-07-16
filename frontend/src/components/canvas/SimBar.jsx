@@ -60,7 +60,7 @@ export default function SimBar({ onSave }) {
 
   return (
     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 flex-wrap justify-center
-                    max-w-[calc(100%-5.5rem)] bg-surface/90 backdrop-blur border border-white/[0.08] rounded-xl pl-4 pr-2 py-2 shadow-lg shadow-black/30">
+                    max-w-[calc(100%-5.5rem)] bg-surface/90 backdrop-blur border border-hairline/[0.08] rounded-xl pl-4 pr-2 py-2 shadow-lg shadow-black/30">
       {/* Load */}
       <label className="flex items-center gap-2.5">
         <span className="font-mono text-[10px] uppercase tracking-wider text-muted whitespace-nowrap">Load</span>
@@ -79,7 +79,7 @@ export default function SimBar({ onSave }) {
         </span>
       </label>
 
-      <div className="w-px h-5 bg-white/[0.08]" aria-hidden />
+      <div className="w-px h-5 bg-hairline/[0.08]" aria-hidden />
 
       {/* Read/write mix */}
       <label className="flex items-center gap-2" title="Share of traffic that is reads vs writes">
@@ -97,7 +97,7 @@ export default function SimBar({ onSave }) {
         <span className="font-mono text-[11px] text-muted w-[3.6rem] tabular-nums">{readPct}/{100 - readPct}</span>
       </label>
 
-      <div className="w-px h-5 bg-white/[0.08]" aria-hidden />
+      <div className="w-px h-5 bg-hairline/[0.08]" aria-hidden />
 
       {/* Run */}
       <button
@@ -141,7 +141,7 @@ export default function SimBar({ onSave }) {
           <LayoutTemplate size={13} /> Examples <ChevronDown size={12} />
         </button>
         {examplesOpen && (
-          <div className="absolute right-0 top-full mt-1.5 w-64 bg-elevated border border-white/[0.09] rounded-lg py-1 shadow-xl shadow-black/40">
+          <div className="absolute right-0 top-full mt-1.5 w-64 bg-elevated border border-hairline/[0.09] rounded-lg py-1 shadow-xl shadow-black/40">
             {PRESETS.map((p) => (
               <button
                 key={p.id}
@@ -153,7 +153,7 @@ export default function SimBar({ onSave }) {
                   clearFailures();
                   setExamplesOpen(false);
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-white/[0.04]"
+                className="w-full text-left px-3 py-2 hover:bg-hairline/[0.04]"
               >
                 <span className="block text-[12.5px] text-ink">{p.label}</span>
                 <span className="block text-[11px] text-muted leading-snug mt-0.5">{p.hint}</span>
@@ -198,7 +198,7 @@ export default function SimBar({ onSave }) {
           <HelpCircle size={15} />
         </button>
         {helpOpen && (
-          <div className="absolute right-0 top-full mt-1.5 w-[300px] bg-elevated border border-white/[0.09] rounded-xl p-4 shadow-xl shadow-black/40">
+          <div className="absolute right-0 top-full mt-1.5 w-[300px] bg-elevated border border-hairline/[0.09] rounded-xl p-4 shadow-xl shadow-black/40">
             <h3 className="text-[12.5px] font-medium text-ink mb-3">The loop</h3>
             <ol className="flex flex-col gap-2.5">
               {HOW_IT_WORKS.map((s) => (
@@ -211,8 +211,8 @@ export default function SimBar({ onSave }) {
                 </li>
               ))}
             </ol>
-            <p className="mt-3 pt-3 border-t border-white/[0.06] text-[11px] text-muted">
-              Tip: <kbd className="font-mono text-[10px] text-ink/80 bg-white/[0.06] border border-white/[0.1] rounded px-1">Del</kbd> removes
+            <p className="mt-3 pt-3 border-t border-hairline/[0.06] text-[11px] text-muted">
+              Tip: <kbd className="font-mono text-[10px] text-ink/80 bg-hairline/[0.06] border border-hairline/[0.1] rounded px-1">Del</kbd> removes
               a selected node · the <BookOpen size={10} className="inline text-indigo-300" aria-hidden /> icon
               in the palette opens theory.
             </p>

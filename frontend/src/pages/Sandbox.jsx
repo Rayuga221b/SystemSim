@@ -69,7 +69,7 @@ export default function Sandbox() {
           <button
             type="button"
             onClick={() => setPaletteOpen(!paletteOpen)}
-            className="absolute top-3 left-3 z-10 p-2 rounded-lg bg-surface/90 backdrop-blur border border-white/[0.08] text-muted hover:text-ink transition-colors"
+            className="absolute top-3 left-3 z-10 p-2 rounded-lg bg-surface/90 backdrop-blur border border-hairline/[0.08] text-muted hover:text-ink transition-colors"
             aria-label={paletteOpen ? "Hide component palette" : "Show component palette"}
           >
             {paletteOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
@@ -101,7 +101,7 @@ export default function Sandbox() {
                       key={p.id}
                       type="button"
                       onClick={() => loadPreset(p)}
-                      className="text-left rounded-lg border border-white/[0.08] bg-surface/90 backdrop-blur-sm px-3.5 py-2.5
+                      className="text-left rounded-lg border border-hairline/[0.08] bg-surface/90 backdrop-blur-sm px-3.5 py-2.5
                                  hover:border-indigo-500/35 hover:bg-elevated transition-colors duration-150"
                     >
                       <span className="block text-[12.5px] font-medium text-ink">{p.label}</span>
@@ -132,7 +132,7 @@ export default function Sandbox() {
                 type="button"
                 onClick={() => setSaveNudgeDismissed(true)}
                 aria-label="Dismiss"
-                className="text-muted/50 hover:text-ink p-1 rounded-full hover:bg-white/[0.06] transition-colors"
+                className="text-muted/50 hover:text-ink p-1 rounded-full hover:bg-hairline/[0.06] transition-colors"
               >
                 <X size={13} />
               </button>
@@ -144,8 +144,8 @@ export default function Sandbox() {
 
         {/* Inspector / results */}
         {showPanel && (
-          <aside className="w-[300px] shrink-0 h-full border-l border-white/[0.06] bg-surface/95 flex flex-col">
-            <div className="flex border-b border-white/[0.06]" role="tablist">
+          <aside className="w-[300px] shrink-0 h-full border-l border-hairline/[0.06] bg-surface/95 flex flex-col">
+            <div className="flex border-b border-hairline/[0.06]" role="tablist">
               <TabButton active={tab === "inspect"} onClick={() => setTab("inspect")} disabled={!selectedNode}>
                 <MousePointerClick size={12} aria-hidden /> Inspect
               </TabButton>

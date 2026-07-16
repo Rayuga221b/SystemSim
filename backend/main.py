@@ -8,9 +8,11 @@ migrations instead (create_all is a no-op on tables that already exist).
 """
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +20,7 @@ load_dotenv()
 from db.base import Base
 from db.session import engine
 import models  # noqa: F401 — register all models on Base before create_all
-from routes import simulate, challenges, designs, casestudies, ai, admin, auth, me
+from routes import simulate, challenges, designs, casestudies, ai, admin, auth, me, roadmap
 
 
 @asynccontextmanager
@@ -47,6 +49,13 @@ app.include_router(designs.router)
 app.include_router(casestudies.router)
 app.include_router(ai.router)
 app.include_router(admin.router)
+app.include_router(roadmap.router)
+
+# Pre-rendered roadmap diagram assets (SVGs produced by the ingest pipeline).
+# Served as static files rather than through a route — they're immutable assets.
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+_STATIC_DIR.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
 
 @app.get("/health")

@@ -7,8 +7,10 @@ import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    {/* forcedTheme="dark" locks the theme — DottedSurface always uses white particles */}
-    <ThemeProvider defaultTheme="dark" forcedTheme="dark" attribute="class">
+    {/* Dark is the default/primary identity (see DESIGN.md "Dark technical");
+        light is an explicit opt-in via the Navbar toggle, not OS-driven, so
+        the app doesn't silently repaint on a system setting change. */}
+    <ThemeProvider defaultTheme="dark" enableSystem={false} attribute="class">
       <RouterProvider router={router} />
     </ThemeProvider>
   </React.StrictMode>

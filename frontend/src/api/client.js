@@ -2,6 +2,15 @@
 // No fetch anywhere else in the frontend.
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+// Resolve a server asset path (e.g. "/static/roadmap/diagrams/x.svg") to a full
+// URL. Absolute URLs and data: URIs pass through untouched. Used by the Markdown
+// renderer so lesson images served from the API load correctly from any page.
+export function assetUrl(path) {
+  if (!path) return path;
+  if (/^(https?:)?\/\//.test(path) || path.startsWith("data:")) return path;
+  return `${BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
 const TOKEN_KEY = "systemsim_token";
 
 export function getToken() {
@@ -65,6 +74,10 @@ export const api = {
   // ── case studies ──────────────────────────────────────────────────────────
   listCaseStudies: () => request("/casestudies"),
   getCaseStudy: (slug) => request(`/casestudies/${slug}`),
+
+  // ── roadmap (learn track) ─────────────────────────────────────────────────
+  getRoadmap: () => request("/roadmap"),
+  getRoadmapLesson: (slug) => request(`/roadmap/${slug}`),
 
   // ── auth ──────────────────────────────────────────────────────────────────
   register: (email, password) =>

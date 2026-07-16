@@ -10,11 +10,12 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   CheckCircle2, Clock, ArrowRight, ChevronLeft, ChevronRight, X,
-  BookOpen, Blocks, PenTool, Mic, Compass, Activity, Scale, TrendingUp,
+  BookOpen, Blocks, PenTool, Mic, Compass, Activity, Scale, TrendingUp, Map,
 } from "lucide-react";
 import { CHAPTERS } from "@/data/chapters";
 import { CONCEPTS } from "@/data/concepts";
 import { COMPONENTS, CATEGORIES } from "@/lib/components";
+import { api } from "@/api/client";
 import { useStore } from "@/store";
 import Prose from "@/components/ui/Prose";
 import PageGlow from "@/components/ui/PageGlow";
@@ -68,7 +69,7 @@ function ChapterModal({ chapter, meta, index, total, onClose, onNav }) {
         role="dialog"
         aria-modal="true"
         aria-label={chapter.title}
-        className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/60"
+        className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-hairline/[0.08] shadow-2xl shadow-black/60"
         style={{ background: `linear-gradient(160deg, ${meta.color}2e 0%, #0c0a1a 40%, #050508 100%)` }}
         initial={{ opacity: 0, scale: shouldReduce ? 1 : 0.92, y: shouldReduce ? 0 : 18 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -77,7 +78,7 @@ function ChapterModal({ chapter, meta, index, total, onClose, onNav }) {
       >
         {/* Header */}
         <div
-          className="sticky top-0 z-10 flex items-center gap-3 px-6 sm:px-7 py-5 border-b border-white/[0.08] backdrop-blur-md"
+          className="sticky top-0 z-10 flex items-center gap-3 px-6 sm:px-7 py-5 border-b border-hairline/[0.08] backdrop-blur-md"
           style={{ background: `${meta.color}14` }}
         >
           <span className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${meta.color}26` }}>
@@ -105,9 +106,9 @@ function ChapterModal({ chapter, meta, index, total, onClose, onNav }) {
         {/* Content */}
         <div className="px-6 sm:px-7 py-6">
           {chapter.sections.map((s, si) => (
-            <div key={s.heading} className="mb-7 last:mb-0 pb-7 last:pb-0 border-b border-white/[0.06] last:border-0">
-              <h3 className="flex items-baseline gap-2.5 font-display font-semibold text-ink text-[0.95rem] mb-2.5">
-                <span className="font-mono text-[11px]" style={{ color: meta.color }} aria-hidden>
+            <div key={s.heading} className="mb-7 last:mb-0 pb-7 last:pb-0 border-b border-hairline/[0.06] last:border-0">
+              <h3 className="flex items-baseline gap-2.5 font-display font-semibold text-[0.95rem] mb-2.5" style={{ color: meta.color }}>
+                <span className="font-mono text-[11px]" aria-hidden>
                   {String(si + 1).padStart(2, "0")}
                 </span>
                 {s.heading}
@@ -145,7 +146,7 @@ function ChapterModal({ chapter, meta, index, total, onClose, onNav }) {
                 onClick={() => onNav(-1)}
                 disabled={index === 0}
                 aria-label="Previous chapter"
-                className="p-1.5 rounded-lg border border-white/[0.08] text-muted hover:text-ink hover:border-white/[0.16] disabled:opacity-25 disabled:pointer-events-none transition-colors"
+                className="p-1.5 rounded-lg border border-hairline/[0.08] text-muted hover:text-ink hover:border-hairline/[0.16] disabled:opacity-25 disabled:pointer-events-none transition-colors"
               >
                 <ChevronLeft size={14} />
               </button>
@@ -154,7 +155,7 @@ function ChapterModal({ chapter, meta, index, total, onClose, onNav }) {
                 onClick={() => onNav(1)}
                 disabled={index === total - 1}
                 aria-label="Next chapter"
-                className="p-1.5 rounded-lg border border-white/[0.08] text-muted hover:text-ink hover:border-white/[0.16] disabled:opacity-25 disabled:pointer-events-none transition-colors"
+                className="p-1.5 rounded-lg border border-hairline/[0.08] text-muted hover:text-ink hover:border-hairline/[0.16] disabled:opacity-25 disabled:pointer-events-none transition-colors"
               >
                 <ChevronRight size={14} />
               </button>
@@ -163,6 +164,70 @@ function ChapterModal({ chapter, meta, index, total, onClose, onNav }) {
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+// Featured roadmap block — a few preview days + a button into the full track
+// (/learn/roadmap). Data comes from the DB-backed /roadmap endpoint; the block
+// hides itself gracefully if the API is unreachable.
+function RoadmapFeature() {
+  const [data, setData] = useState(null);
+  useEffect(() => { api.getRoadmap().then(setData).catch(() => setData(false)); }, []);
+  if (data === false) return null;
+
+  const preview = data?.modules.flatMap((m) =>
+    m.lessons.map((l) => ({ ...l, color: m.color }))
+  ).slice(0, 4);
+  const first = preview?.[0];
+
+  return (
+    <section className="pt-10">
+      <div className="relative overflow-hidden rounded-2xl border border-indigo-500/25 p-6 sm:p-8"
+           style={{ background: "linear-gradient(150deg, rgba(124,92,255,0.14) 0%, transparent 55%)" }}>
+        <span aria-hidden className="pointer-events-none absolute -top-16 -right-10 w-56 h-56 rounded-full blur-3xl bg-indigo-500/15" />
+        <div className="relative">
+          <p className="flex items-center gap-2 font-mono text-[11px] text-indigo-400 tracking-[0.14em] uppercase mb-3">
+            <Map size={13} /> Guided track
+          </p>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+            <div>
+              <h2 className="font-display font-semibold text-ink text-[1.4rem] sm:text-[1.6rem] leading-tight mb-2">
+                {data?.title || "The System Design Roadmap"}
+              </h2>
+              <p className="text-muted text-[0.9rem] max-w-[52ch] leading-relaxed">
+                {data?.subtitle ||
+                  "A sequenced path from first principles to production war stories — read in order, then apply in the sandbox."}
+              </p>
+            </div>
+            <Link to="/learn/roadmap" className="btn-primary inline-flex items-center gap-2 text-white text-[13.5px] font-medium rounded-lg px-5 py-2.5 shrink-0 self-start">
+              {data ? `Start the ${data.total_lessons}-lesson roadmap` : "Open the roadmap"}
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {preview?.length > 0 && (
+            <div className="grid sm:grid-cols-2 gap-2.5">
+              {preview.map((l) => (
+                <Link key={l.slug} to={`/learn/roadmap/${l.slug}`}
+                      className="group flex items-center gap-3 rounded-xl border border-hairline/[0.07] bg-base/40 px-4 py-2.5 hover:border-hairline/[0.16] hover:bg-surface transition-colors">
+                  <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-[10.5px] font-semibold"
+                        style={{ backgroundColor: `${l.color}1c`, color: l.color }}>
+                    {String(l.day).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0 flex-1 font-display text-[0.86rem] font-medium text-ink truncate">{l.title}</span>
+                  <ArrowRight size={13} className="text-muted/30 group-hover:text-indigo-400 shrink-0 transition-colors" />
+                </Link>
+              ))}
+            </div>
+          )}
+          {first && (
+            <p className="mt-4 text-[11px] font-mono text-muted/40 uppercase tracking-wider">
+              Begins with Day {first.day} · {first.title}
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -188,7 +253,7 @@ export default function Learn() {
       <div className="relative z-10 max-w-4xl mx-auto px-6">
 
         {/* Header */}
-        <div className="py-16 sm:py-20 border-b border-white/[0.05]">
+        <div className="py-16 sm:py-20 border-b border-hairline/[0.05]">
           <p className="font-mono text-xs text-indigo-400 tracking-[0.14em] uppercase mb-4">
             The Library
           </p>
@@ -203,12 +268,10 @@ export default function Learn() {
             </div>
             <div className="flex items-center gap-5 shrink-0">
               <div className="text-right">
-                <p className="font-display text-3xl text-ink font-bold leading-none mb-1.5">
-                  {read.size}<span className="text-muted text-lg">/{CHAPTERS.length}</span>
-                </p>
-                <p className="font-mono text-[10px] text-muted/50 uppercase tracking-wider">Chapters read</p>
+                <p className="font-display text-3xl text-ink font-bold leading-none mb-1.5">76</p>
+                <p className="font-mono text-[10px] text-muted/50 uppercase tracking-wider">Articles</p>
               </div>
-              <div className="w-px h-9 bg-white/[0.06]" />
+              <div className="w-px h-9 bg-hairline/[0.06]" />
               <div className="text-right">
                 <p className="font-display text-3xl text-indigo-400 font-bold leading-none mb-1.5">{COMPONENTS.length}</p>
                 <p className="font-mono text-[10px] text-muted/50 uppercase tracking-wider">Components</p>
@@ -216,6 +279,9 @@ export default function Learn() {
             </div>
           </div>
         </div>
+
+        {/* Guided roadmap — the long-form sequential track */}
+        <RoadmapFeature />
 
         {/* Core chapters */}
         <section className="pt-10">
@@ -269,7 +335,7 @@ export default function Learn() {
                       {ch.summary}
                     </span>
                   </span>
-                  <span className="relative flex items-center justify-between pt-3 border-t border-white/[0.05]">
+                  <span className="relative flex items-center justify-between pt-3 border-t border-hairline/[0.05]">
                     <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted/50">
                       <Clock size={10} aria-hidden /> {ch.minutes} min
                     </span>
@@ -310,7 +376,7 @@ export default function Learn() {
         {/* Interview prep link-card */}
         <section className="pt-10">
           <Link
-            to="/interview"
+            to="/learn/interview"
             className="group flex items-center gap-4 rounded-xl border border-dashed border-indigo-500/30 bg-surface px-6 py-5
                        hover:bg-elevated hover:border-indigo-500/50 transition-colors duration-150"
           >
@@ -351,8 +417,8 @@ export default function Learn() {
                       key={c.type}
                       type="button"
                       onClick={() => hasConcept && openLearn(c.type)}
-                      className="group text-left bg-surface border border-white/[0.07] rounded-xl p-4 flex items-start gap-3
-                                 hover:bg-elevated hover:border-white/[0.12] transition-colors duration-150"
+                      className="group text-left bg-surface border border-hairline/[0.07] rounded-xl p-4 flex items-start gap-3
+                                 hover:bg-elevated hover:border-hairline/[0.12] transition-colors duration-150"
                     >
                       <span
                         className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
@@ -393,7 +459,7 @@ export default function Learn() {
             </Link>
             <Link
               to="/challenges"
-              className="inline-flex items-center gap-2 text-[13.5px] font-medium text-ink border border-white/[0.1] rounded-lg px-5 py-2.5 hover:bg-elevated hover:border-indigo-500/35 transition-colors"
+              className="inline-flex items-center gap-2 text-[13.5px] font-medium text-ink border border-hairline/[0.1] rounded-lg px-5 py-2.5 hover:bg-elevated hover:border-indigo-500/35 transition-colors"
             >
               Take a scored challenge
             </Link>

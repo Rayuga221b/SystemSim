@@ -65,7 +65,7 @@ function LeadStory({ cs }) {
         </span>
         <span className="flex gap-1.5 flex-wrap">
           {(cs.tags || []).map((tag) => (
-            <span key={tag} className="font-mono text-[10px] text-muted/50 bg-white/[0.03] border border-white/[0.05] px-2 py-0.5 rounded">
+            <span key={tag} className="font-mono text-[10px] text-muted/50 bg-hairline/[0.03] border border-hairline/[0.05] px-2 py-0.5 rounded">
               {tag}
             </span>
           ))}
@@ -82,7 +82,7 @@ function SecondFeature({ cs }) {
   return (
     <Link
       to={`/case-studies/${cs.slug}`}
-      className="group relative block bg-surface border border-white/[0.06] rounded-xl p-6 h-full transition-colors duration-200 hover:bg-elevated hover:border-white/[0.12]"
+      className="group relative block bg-surface border border-hairline/[0.06] rounded-xl p-6 h-full transition-colors duration-200 hover:bg-elevated hover:border-hairline/[0.12]"
     >
       <span className="absolute top-0 left-6 right-6 h-px" style={{ background: color }} aria-hidden />
       <div className="flex items-center gap-2.5 mb-4 flex-wrap">
@@ -114,7 +114,7 @@ function IndexRow({ cs, rank }) {
     <Link
       to={`/case-studies/${cs.slug}`}
       className="group grid grid-cols-[2.5rem_auto_1fr_auto] items-baseline gap-x-3 py-5 px-2 -mx-2 rounded-lg
-                 border-b border-white/[0.05] hover:bg-elevated/35 transition-colors duration-150"
+                 border-b border-hairline/[0.05] hover:bg-elevated/35 transition-colors duration-150"
     >
       <span className="font-mono text-[13px] text-muted/35 group-hover:text-muted/70 transition-colors" aria-hidden>
         {String(rank).padStart(2, "0")}
@@ -134,7 +134,7 @@ function IndexRow({ cs, rank }) {
         </span>
         <span className="flex gap-1.5 flex-wrap mt-2">
           {(cs.tags || []).map((tag) => (
-            <span key={tag} className="font-mono text-[10px] text-muted/45 bg-white/[0.03] border border-white/[0.05] px-2 py-0.5 rounded">
+            <span key={tag} className="font-mono text-[10px] text-muted/45 bg-hairline/[0.03] border border-hairline/[0.05] px-2 py-0.5 rounded">
               {tag}
             </span>
           ))}
@@ -182,7 +182,7 @@ export default function CaseStudies() {
       <div className="relative z-10 max-w-5xl mx-auto px-6">
 
         {/* Header */}
-        <div className="py-16 sm:py-20 border-b border-white/[0.05]">
+        <div className="py-16 sm:py-20 border-b border-hairline/[0.05]">
           <p className="font-mono text-xs text-indigo-400 tracking-[0.14em] uppercase mb-4">
             Engineering Incidents
           </p>
@@ -200,7 +200,7 @@ export default function CaseStudies() {
                 <p className="font-display text-3xl text-ink font-bold leading-none mb-1.5">{items.length || "—"}</p>
                 <p className="font-mono text-[10px] text-muted/50 uppercase tracking-wider">Studies</p>
               </div>
-              <div className="w-px h-9 bg-white/[0.06]" />
+              <div className="w-px h-9 bg-hairline/[0.06]" />
               <div className="text-right">
                 <p className="font-display text-3xl text-indigo-400 font-bold leading-none mb-1.5">
                   {items.length ? new Set(items.map((cs) => cs.company)).size : "—"}
@@ -213,7 +213,7 @@ export default function CaseStudies() {
 
         {/* Filters */}
         {studies !== null && !error && (
-          <div className="flex items-center gap-1.5 flex-wrap py-4 border-b border-white/[0.05]">
+          <div className="flex items-center gap-1.5 flex-wrap py-4 border-b border-hairline/[0.05]">
             {DIFFICULTIES.map((d) => (
               <button
                 key={d}
@@ -222,7 +222,7 @@ export default function CaseStudies() {
                 className={`text-sm px-4 py-1.5 rounded-full transition-all duration-150 ${
                   active === d
                     ? "bg-indigo-600 text-white font-medium"
-                    : "text-muted/70 hover:text-ink hover:bg-white/[0.04]"
+                    : "text-muted/70 hover:text-ink hover:bg-hairline/[0.04]"
                 }`}
               >
                 {d}
@@ -236,9 +236,9 @@ export default function CaseStudies() {
 
         {studies === null && !error && (
           <div className="pt-12 pb-24 flex flex-col gap-8">
-            <div className="h-[240px] rounded-xl bg-surface border border-white/[0.05] animate-pulse" />
+            <div className="h-[240px] rounded-xl bg-surface border border-hairline/[0.05] animate-pulse" />
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-[76px] rounded-lg bg-surface border border-white/[0.05] animate-pulse" />
+              <div key={i} className="h-[76px] rounded-lg bg-surface border border-hairline/[0.05] animate-pulse" />
             ))}
           </div>
         )}
@@ -273,7 +273,7 @@ export default function CaseStudies() {
         {/* The index */}
         {rest.length > 0 && (
           <div className="pb-24">
-            <p className="font-mono text-[11px] text-muted/40 uppercase tracking-[0.12em] pb-2 border-b border-white/[0.08]">
+            <p className="font-mono text-[11px] text-muted/40 uppercase tracking-[0.12em] pb-2 border-b border-hairline/[0.08]">
               The Index
             </p>
             {rest.map((cs, i) => (

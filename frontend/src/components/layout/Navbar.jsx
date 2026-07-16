@@ -4,13 +4,16 @@ import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useStore } from "@/store";
 import Logo from "@/components/ui/Logo";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
+// Learn sits before Sandbox (2026-07-16): the library is the entry point.
+// Interview prep moved under /learn/interview and is reached from the Learn
+// page's link-card, so it's no longer a top-level nav item.
 const LINKS = [
+  { to: "/learn",        label: "Learn"        },
   { to: "/sandbox",      label: "Sandbox"      },
   { to: "/challenges",   label: "Challenges"   },
   { to: "/case-studies", label: "Case Studies" },
-  { to: "/learn",        label: "Learn"        },
-  { to: "/interview",    label: "Interview"    },
   { to: "/dashboard",    label: "Dashboard"    },
 ];
 
@@ -52,7 +55,7 @@ export default function Navbar() {
       className={`sticky top-0 z-50 w-full transition-all duration-300 ease-out border-b
         ${scrolled
           ? "bg-base/90 backdrop-blur-2xl border-indigo-500/15"
-          : "bg-base/60 backdrop-blur-xl border-white/[0.06]"
+          : "bg-base/60 backdrop-blur-xl border-hairline/[0.06]"
         }`}
     >
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
@@ -78,7 +81,7 @@ export default function Navbar() {
                   "transition-all duration-150",
                   isActive
                     ? "text-ink bg-indigo-500/12 border border-indigo-500/25"
-                    : "text-muted hover:text-ink border border-transparent hover:bg-white/[0.05]",
+                    : "text-muted hover:text-ink border border-transparent hover:bg-hairline/[0.05]",
                 ].join(" ")
               }
             >
@@ -93,7 +96,7 @@ export default function Navbar() {
             {user ? (
               <Link
                 to="/dashboard"
-                className="flex items-center gap-2 pl-1.5 pr-3.5 py-1 rounded-lg border border-white/[0.08] hover:bg-white/[0.05] transition-colors duration-150"
+                className="flex items-center gap-2 pl-1.5 pr-3.5 py-1 rounded-lg border border-hairline/[0.08] hover:bg-hairline/[0.05] transition-colors duration-150"
                 title={user.email}
               >
                 <span className="w-6 h-6 rounded-lg bg-indigo-500/25 border border-indigo-500/40 flex items-center justify-center font-display text-[11px] font-semibold text-indigo-200 uppercase">
@@ -105,7 +108,7 @@ export default function Navbar() {
               <>
                 <Link
                   to="/login"
-                  className="font-display text-[0.8125rem] font-medium text-muted hover:text-ink px-4 py-1.5 rounded-lg transition-colors duration-150 hover:bg-white/[0.05]"
+                  className="font-display text-[0.8125rem] font-medium text-muted hover:text-ink px-4 py-1.5 rounded-lg transition-colors duration-150 hover:bg-hairline/[0.05]"
                 >
                   Sign in
                 </Link>
@@ -118,9 +121,10 @@ export default function Navbar() {
               </>
             )}
           </div>
+          <ThemeToggle />
           <button
             type="button"
-            className="md:hidden p-2 rounded-lg text-muted hover:text-ink hover:bg-white/[0.06] transition-colors duration-150"
+            className="md:hidden p-2 rounded-lg text-muted hover:text-ink hover:bg-hairline/[0.06] transition-colors duration-150"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
@@ -141,7 +145,7 @@ export default function Navbar() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden border-t border-white/[0.06] bg-base/95 backdrop-blur-xl"
+            className="overflow-hidden border-t border-hairline/[0.06] bg-base/95 backdrop-blur-xl"
           >
             <nav aria-label="Mobile navigation" className="px-5 py-4 flex flex-col gap-1">
               {LINKS.map(({ to, label }) => (
@@ -154,7 +158,7 @@ export default function Navbar() {
                       "font-display text-sm font-medium py-2.5 px-3 rounded-lg block transition-colors duration-150",
                       isActive
                         ? "text-ink bg-indigo-500/12 border border-indigo-500/20"
-                        : "text-muted hover:text-ink hover:bg-white/[0.05] border border-transparent",
+                        : "text-muted hover:text-ink hover:bg-hairline/[0.05] border border-transparent",
                     ].join(" ")
                   }
                 >
@@ -162,12 +166,16 @@ export default function Navbar() {
                 </NavLink>
               ))}
             </nav>
-            <div className="px-5 pb-5 pt-0 flex flex-col gap-2 border-t border-white/[0.04]">
+            <div className="px-5 pb-5 pt-0 flex flex-col gap-2 border-t border-hairline/[0.04]">
+              <div className="flex items-center justify-between py-2.5">
+                <span className="font-display text-sm font-medium text-muted">Appearance</span>
+                <ThemeToggle />
+              </div>
               {user ? (
                 <Link
                   to="/dashboard"
                   onClick={() => setMenuOpen(false)}
-                  className="w-full text-center font-display text-sm font-medium text-ink py-2.5 rounded-lg border border-white/[0.08] hover:bg-white/[0.05] transition-colors duration-150"
+                  className="w-full text-center font-display text-sm font-medium text-ink py-2.5 rounded-lg border border-hairline/[0.08] hover:bg-hairline/[0.05] transition-colors duration-150"
                 >
                   Your workspace
                 </Link>
@@ -176,7 +184,7 @@ export default function Navbar() {
                   <Link
                     to="/login"
                     onClick={() => setMenuOpen(false)}
-                    className="w-full text-center font-display text-sm font-medium text-ink py-2.5 rounded-lg border border-white/[0.08] hover:bg-white/[0.05] transition-colors duration-150"
+                    className="w-full text-center font-display text-sm font-medium text-ink py-2.5 rounded-lg border border-hairline/[0.08] hover:bg-hairline/[0.05] transition-colors duration-150"
                   >
                     Sign in
                   </Link>
