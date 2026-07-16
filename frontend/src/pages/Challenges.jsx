@@ -105,7 +105,7 @@ function TrackItem({ c, step, zone, emphasized, bestScore }) {
         {(c.tags || []).map((tag) => (
           <span
             key={tag}
-            className="font-mono text-[10px] text-muted/60 bg-white/[0.03] border border-white/[0.05] px-2 py-0.5 rounded"
+            className="font-mono text-[10px] text-muted/60 bg-hairline/[0.03] border border-hairline/[0.05] px-2 py-0.5 rounded"
           >
             {tag}
           </span>
@@ -170,7 +170,7 @@ export default function Challenges() {
       <div className="relative z-10 max-w-4xl mx-auto px-6">
 
         {/* Header */}
-        <div className="py-16 sm:py-20 border-b border-white/[0.05]">
+        <div className="py-16 sm:py-20 border-b border-hairline/[0.05]">
           <p className="font-mono text-xs text-indigo-400 tracking-[0.14em] uppercase mb-4">
             Practice Arena
           </p>
@@ -192,14 +192,14 @@ export default function Challenges() {
                     </p>
                     <p className="font-mono text-[10px] text-muted/50 uppercase tracking-wider">Solved</p>
                   </div>
-                  <div className="w-px h-9 bg-white/[0.06]" />
+                  <div className="w-px h-9 bg-hairline/[0.06]" />
                 </>
               ) : null}
               <div className="text-right">
                 <p className="font-display text-3xl text-ink font-bold leading-none mb-1.5">{items.length || "—"}</p>
                 <p className="font-mono text-[10px] text-muted/50 uppercase tracking-wider">Stops on the track</p>
               </div>
-              <div className="w-px h-9 bg-white/[0.06]" />
+              <div className="w-px h-9 bg-hairline/[0.06]" />
               <div className="text-right">
                 <p className="font-display text-3xl text-amber-400 font-bold leading-none mb-1.5">{DIFFICULTIES.length - 1}</p>
                 <p className="font-mono text-[10px] text-muted/50 uppercase tracking-wider">Levels</p>
@@ -215,7 +215,7 @@ export default function Challenges() {
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-1.5 flex-wrap py-4 border-b border-white/[0.05]">
+        <div className="flex items-center gap-1.5 flex-wrap py-4 border-b border-hairline/[0.05]">
           {DIFFICULTIES.map((d) => (
             <button
               key={d}
@@ -224,7 +224,7 @@ export default function Challenges() {
               className={`text-sm px-4 py-1.5 rounded-full transition-all duration-150 ${
                 active === d
                   ? "bg-indigo-600 text-white font-medium"
-                  : "text-muted/70 hover:text-ink hover:bg-white/[0.04]"
+                  : "text-muted/70 hover:text-ink hover:bg-hairline/[0.04]"
               }`}
             >
               {d}
@@ -241,8 +241,8 @@ export default function Challenges() {
             <div className="flex flex-col gap-6">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="flex gap-5 items-start">
-                  <div className="w-8 h-8 rounded-full bg-surface border border-white/[0.05] animate-pulse shrink-0" />
-                  <div className="flex-1 h-[104px] rounded-xl bg-surface border border-white/[0.05] animate-pulse" />
+                  <div className="w-8 h-8 rounded-full bg-surface border border-hairline/[0.05] animate-pulse shrink-0" />
+                  <div className="flex-1 h-[104px] rounded-xl bg-surface border border-hairline/[0.05] animate-pulse" />
                 </div>
               ))}
             </div>

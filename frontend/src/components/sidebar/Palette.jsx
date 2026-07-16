@@ -20,7 +20,7 @@ export default function Palette({ embedded = false }) {
       className={
         embedded
           ? "w-full h-full overflow-y-auto"
-          : "w-[232px] shrink-0 h-full overflow-y-auto border-r border-white/[0.06] bg-surface/95"
+          : "w-[232px] shrink-0 h-full overflow-y-auto border-r border-hairline/[0.06] bg-surface/95"
       }
     >
       {!embedded && (

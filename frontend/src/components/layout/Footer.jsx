@@ -75,7 +75,7 @@ export default function Footer() {
           <div className="md:col-span-1 flex flex-col items-center md:items-start gap-5">
             {/* Logo + wordmark */}
             <Link to="/" className="flex items-center gap-2.5 select-none group">
-              <span className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shadow-[0_0_12px_rgba(124,92,255,0.2)] group-hover:bg-white/16 transition-colors duration-200">
+              <span className="w-9 h-9 rounded-xl bg-hairline/10 border border-hairline/20 flex items-center justify-center shadow-[0_0_12px_rgba(124,92,255,0.2)] group-hover:bg-hairline/16 transition-colors duration-200">
                 <Logo size={22} />
               </span>
               {/* text-[1rem] not text-base: this project's "base" theme color
@@ -100,7 +100,7 @@ export default function Footer() {
                     aria-label={label}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-[#808098] hover:text-indigo-400 hover:bg-indigo-500/10 hover:border-indigo-500/25 transition-all duration-150"
+                    className="w-8 h-8 rounded-lg bg-hairline/[0.05] border border-hairline/[0.08] flex items-center justify-center text-[#808098] hover:text-indigo-400 hover:bg-indigo-500/10 hover:border-indigo-500/25 transition-all duration-150"
                   >
                     <Icon size={14} />
                   </a>

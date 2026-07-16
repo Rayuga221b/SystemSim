@@ -8,6 +8,12 @@ __pycache__/
 # local databases (SQLite dev fallback)
 *.db
 
+# roadmap ingest cache — third-party source material, reference input only,
+# never committed or served (see services/roadmap_ingest.py)
+backend/data/roadmap_source_cache/
+# pre-rendered roadmap diagram assets are build artifacts of ingest
+backend/static/roadmap/
+
 # env / secrets
 .env
 .env.local

@@ -91,7 +91,7 @@ function SystemNode({ id, data, selected }) {
 
       {/* Utilization bar — only after a simulation */}
       {util != null && (
-        <div className="h-[3px] mx-[1px] mb-[1px] rounded-b-lg bg-white/[0.04] overflow-hidden">
+        <div className="h-[3px] mx-[1px] mb-[1px] rounded-b-lg bg-hairline/[0.04] overflow-hidden">
           <div
             className={`h-full transition-all duration-300 ${
               status === "overloaded" || status === "failed"

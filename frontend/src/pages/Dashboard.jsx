@@ -90,7 +90,7 @@ export default function Dashboard() {
       <div className="relative z-10 max-w-4xl mx-auto px-6">
 
         {/* Header */}
-        <div className="py-14 sm:py-16 border-b border-white/[0.05] flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+        <div className="py-14 sm:py-16 border-b border-hairline/[0.05] flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
             <p className="font-mono text-xs text-indigo-400 tracking-[0.14em] uppercase mb-4">Workspace</p>
             <h1 className="font-display font-semibold text-3xl sm:text-4xl mb-2 bg-gradient-to-r from-white via-white to-indigo-300 bg-clip-text text-transparent">Welcome back</h1>
@@ -98,9 +98,9 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-6 shrink-0">
             <Stat value={designs?.length ?? "—"} label="Designs" />
-            <div className="w-px h-9 bg-white/[0.06]" />
+            <div className="w-px h-9 bg-hairline/[0.06]" />
             <Stat value={attempts?.length ?? "—"} label="Attempts" />
-            <div className="w-px h-9 bg-white/[0.06]" />
+            <div className="w-px h-9 bg-hairline/[0.06]" />
             <Stat value={bestScore ?? "—"} label="Best score" accent />
             <button
               type="button"
@@ -132,7 +132,7 @@ export default function Dashboard() {
               {[0, 1].map((i) => <div key={i} className="h-16 rounded-xl bg-surface animate-pulse" />)}
             </div>
           ) : designs.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/[0.08] py-10 text-center">
+            <div className="rounded-xl border border-dashed border-hairline/[0.08] py-10 text-center">
               <p className="text-muted text-sm mb-3">No designs yet — your saved canvases will live here.</p>
               <Link to="/sandbox" className="text-indigo-300 text-[13px] hover:text-indigo-200">Open the sandbox →</Link>
             </div>
@@ -141,7 +141,7 @@ export default function Dashboard() {
               {designs.map((d) => (
                 <div
                   key={d.id}
-                  className="group flex items-center gap-4 bg-surface border border-white/[0.06] rounded-xl px-4 py-3 hover:bg-elevated/60 transition-colors"
+                  className="group flex items-center gap-4 bg-surface border border-hairline/[0.06] rounded-xl px-4 py-3 hover:bg-elevated/60 transition-colors"
                 >
                   <button type="button" onClick={() => openDesign(d)} className="flex-1 min-w-0 text-left">
                     <span className="block text-[13.5px] font-medium text-ink truncate group-hover:text-indigo-200 transition-colors">
@@ -178,7 +178,7 @@ export default function Dashboard() {
           {attempts === null ? (
             <div className="h-16 rounded-xl bg-surface animate-pulse" />
           ) : attempts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/[0.08] py-10 text-center">
+            <div className="rounded-xl border border-dashed border-hairline/[0.08] py-10 text-center">
               <p className="text-muted text-sm mb-3">No attempts yet — get scored on a real scenario.</p>
               <Link to="/challenges" className="text-indigo-300 text-[13px] hover:text-indigo-200">Browse challenges →</Link>
             </div>
@@ -190,7 +190,7 @@ export default function Dashboard() {
                   <Link
                     key={a.id}
                     to={`/challenges/${a.challenge_slug}`}
-                    className="flex items-center gap-4 bg-surface border border-white/[0.06] rounded-xl px-4 py-3 hover:bg-elevated/60 transition-colors"
+                    className="flex items-center gap-4 bg-surface border border-hairline/[0.06] rounded-xl px-4 py-3 hover:bg-elevated/60 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <span className="block text-[13.5px] font-medium text-ink truncate">{a.challenge_title || a.challenge_slug}</span>

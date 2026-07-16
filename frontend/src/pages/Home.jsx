@@ -3,13 +3,14 @@ import {
   ArrowRight, LayoutDashboard, Target, BookOpen,
   Monitor, Globe, Shield, GitFork, Gauge, Server, Cpu,
   Database, HardDrive, Archive, Wifi, Layers, Search, Inbox,
-  Users, BrainCircuit, AlertTriangle,
+  BrainCircuit, AlertTriangle, Route, GraduationCap, Library,
 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { DottedSurface }    from "@/components/ui/dotted-surface";
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
-import ComponentCard from "@/components/home/ComponentCard";
-import SimGraph      from "@/components/home/SimGraph";
+import ComponentCard      from "@/components/home/ComponentCard";
+import SimGraph           from "@/components/home/SimGraph";
+import LearnPathDiagram   from "@/components/home/LearnPathDiagram";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -29,8 +30,12 @@ const CAROUSEL = [
 const COMPONENT_STRIP = [
   // ── ingress ──────────────────────────────────────────────────────────────
   {
+    // iconColor uses a literal hex, not `text-indigo-300` — this tile's
+    // gradient (grad) is fixed-dark in both themes, so the icon must not
+    // repaint to the light-mode-readable indigo-300 override (would go
+    // dark-on-dark). See ComponentCard.jsx / DESIGN.md note.
     icon: <Monitor size={18} />, label: "Client", cat: "ingress",
-    iconColor: "text-indigo-300", iconBg: "bg-indigo-500/20",
+    iconColor: "text-[#B6A6FF]", iconBg: "bg-indigo-500/20",
     grad: "from-indigo-900/70 to-blue-900/40", border: "border-indigo-500/30",
   },
   {
@@ -45,23 +50,23 @@ const COMPONENT_STRIP = [
   },
   {
     icon: <Shield size={18} />, label: "API Gateway", cat: "ingress",
-    iconColor: "text-indigo-300", iconBg: "bg-indigo-500/20",
+    iconColor: "text-[#B6A6FF]", iconBg: "bg-indigo-500/20",
     grad: "from-indigo-900/70 to-violet-900/50", border: "border-indigo-400/30",
   },
   {
     icon: <GitFork size={18} />, label: "Load Balancer", cat: "ingress",
-    iconColor: "text-sky-300", iconBg: "bg-sky-500/20",
+    iconColor: "text-[#7DD3FC]", iconBg: "bg-sky-500/20",
     grad: "from-sky-900/70 to-blue-900/40", border: "border-sky-500/30",
   },
   {
     icon: <Gauge size={18} />, label: "Rate Limiter", cat: "ingress",
-    iconColor: "text-amber-300", iconBg: "bg-amber-500/20",
+    iconColor: "text-[#FCD34D]", iconBg: "bg-amber-500/20",
     grad: "from-amber-900/70 to-orange-900/40", border: "border-amber-500/30",
   },
   // ── compute ───────────────────────────────────────────────────────────────
   {
     icon: <Server size={18} />, label: "App Server", cat: "compute",
-    iconColor: "text-amber-300", iconBg: "bg-amber-500/20",
+    iconColor: "text-[#FCD34D]", iconBg: "bg-amber-500/20",
     grad: "from-amber-900/70 to-yellow-900/40", border: "border-amber-400/30",
   },
   {
@@ -72,7 +77,7 @@ const COMPONENT_STRIP = [
   // ── storage ───────────────────────────────────────────────────────────────
   {
     icon: <Database size={18} />, label: "SQL Database", cat: "storage",
-    iconColor: "text-emerald-300", iconBg: "bg-emerald-500/20",
+    iconColor: "text-[#6EE7B7]", iconBg: "bg-emerald-500/20",
     grad: "from-emerald-900/70 to-teal-900/40", border: "border-emerald-500/30",
   },
   {
@@ -110,28 +115,28 @@ const WHO_FOR = [
     iconBg: "bg-indigo-500/12 border border-indigo-500/25",
     iconColor: "text-indigo-400",
     title: "Interview prep",
-    desc: "Practice designing URL shorteners, rate limiters, and chat systems. Get scored against reference architectures before your FAANG interview.",
+    desc: "Follow the interview-prep track — the 45-minute interview mapped, grading signals, common mistakes, and drills. Then get scored against reference architectures.",
+  },
+  {
+    icon: <Route size={16} />,
+    iconBg: "bg-amber-500/10 border border-amber-500/20",
+    iconColor: "text-amber-400",
+    title: "Self-study roadmap",
+    desc: "Work the 76-lesson roadmap end to end — Foundations, Storage, Caching, Messaging, Consistency, Scaling — plus core-concept chapters, read like documentation.",
   },
   {
     icon: <BrainCircuit size={16} />,
-    iconBg: "bg-amber-500/10 border border-amber-500/20",
-    iconColor: "text-amber-400",
-    title: "Architecture learning",
-    desc: "Drag, connect, simulate. See exactly where bottlenecks form — visually, in real time — rather than reading about them in theory.",
+    iconBg: "bg-emerald-500/10 border border-emerald-500/20",
+    iconColor: "text-emerald-400",
+    title: "Hands-on practice",
+    desc: "Turn theory into muscle memory. Drag, connect, and simulate on the sandbox, then take structured challenges to see exactly where bottlenecks form.",
   },
   {
     icon: <AlertTriangle size={16} />,
     iconBg: "bg-rose-500/10 border border-rose-500/20",
     iconColor: "text-rose-400",
     title: "Incident analysis",
-    desc: "Walk through how Discord's storage collapsed, how Twitter's fanout failed, and how Netflix survives failures by causing them.",
-  },
-  {
-    icon: <Users size={16} />,
-    iconBg: "bg-emerald-500/10 border border-emerald-500/20",
-    iconColor: "text-emerald-400",
-    title: "Team study sessions",
-    desc: "Run group design reviews. Each person builds a solution, then compare your canvases and discuss the tradeoffs together.",
+    desc: "Walk through how Discord's storage collapsed, how Twitter's fanout failed, and how Netflix survives failures by causing them — then simulate it yourself.",
   },
 ];
 
@@ -220,17 +225,17 @@ export default function Home() {
             className="font-display font-semibold text-[1.375rem] md:text-[1.625rem] leading-[1.2] tracking-[-0.02em] text-ink mb-3"
             style={{ textWrap: "balance" }}
           >
-            Design. Simulate. Understand.
+            Learn. Design. Simulate.
           </motion.h1>
-          <motion.p variants={itemVariants} className="text-muted text-xs leading-relaxed max-w-[42ch] mx-auto mb-6">
-            Build distributed architectures on a canvas, simulate load patterns, and study how real systems fail at scale.
+          <motion.p variants={itemVariants} className="text-muted text-xs leading-relaxed max-w-[46ch] mx-auto mb-6">
+            A structured path through system design — 76 lessons, core concepts, and interview prep — paired with a live canvas where you build architectures and simulate how they fail at scale.
           </motion.p>
           <motion.div variants={itemVariants} className="flex items-center justify-center gap-3 flex-wrap">
             <Link to="/sandbox" className="inline-flex items-center gap-2 btn-primary text-white text-xs font-semibold px-5 py-2 rounded-lg">
               Open Sandbox <ArrowRight size={12} />
             </Link>
-            <Link to="/case-studies" className="inline-flex items-center gap-2 text-xs font-medium text-ink px-5 py-2 rounded-lg border border-white/8 hover:border-indigo-500/35 hover:bg-indigo-500/5 transition-colors duration-150">
-              Browse Case Studies
+            <Link to="/learn" className="inline-flex items-center gap-2 text-xs font-medium text-ink px-5 py-2 rounded-lg border border-hairline/8 hover:border-indigo-500/35 hover:bg-indigo-500/5 transition-colors duration-150">
+              Explore the Library
             </Link>
           </motion.div>
         </motion.div>
@@ -242,7 +247,7 @@ export default function Home() {
           transition={{ delay: shouldReduce ? 0 : 0.28, duration: 0.65, ease: EASE_EXPO }}
         >
           <div className="bg-surface/90 backdrop-blur-sm border border-indigo-500/18 rounded-xl overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.05]">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-hairline/[0.05]">
               <span className="flex gap-1.5" aria-hidden="true">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500/40 border border-red-500/20" />
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500/40 border border-amber-500/20" />
@@ -309,6 +314,70 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Learn library / structured roadmap — SVG path diagram + CTA ── */}
+      {/* Sits on bg-base (a distinct band between the carousel and the #0D0D1E showcase) */}
+      <section className="relative bg-base border-t border-hairline/[0.05] py-16 sm:py-20 overflow-hidden">
+        {/* Soft indigo radial glow, matching neighbouring sections */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: "radial-gradient(ellipse 60% 55% at 50% 30%, rgba(124, 92, 255,0.10) 0%, transparent 70%)",
+          }}
+        />
+
+        <div className="relative max-w-5xl mx-auto px-6">
+          {/* Header — title + description */}
+          <motion.div
+            className="max-w-2xl mb-10"
+            initial={{ opacity: 0, y: shouldReduce ? 0 : 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, ease: EASE_EXPO }}
+          >
+            <p className="font-mono text-xs text-indigo-400/80 tracking-[0.16em] uppercase mb-4">
+              The Library
+            </p>
+            <h2 className="font-display font-semibold text-[1.625rem] sm:text-[2rem] text-ink leading-[1.15] tracking-[-0.02em] text-balance mb-4">
+              A proper path through system design
+            </h2>
+            <p className="text-muted text-sm sm:text-[0.95rem] leading-relaxed max-w-[54ch]">
+              Not a pile of disconnected articles. A structured <span className="text-ink font-medium">76-lesson roadmap</span> grouped into
+              modules — Foundations, Databases &amp; Storage, Caching, Networking, Messaging, Consistency, Resilience, Scaling — plus
+              core-concept chapters, a 14-component reference, and a full interview-prep track. And every chapter links straight back to the
+              canvas: read a chapter, then go break something with it.
+            </p>
+          </motion.div>
+
+          {/* SVG roadmap diagram — self-contained, responsive */}
+          <motion.div
+            className="rounded-xl border border-hairline/[0.07] bg-surface/60 backdrop-blur-sm p-5 sm:p-8"
+            initial={{ opacity: 0, y: shouldReduce ? 0 : 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ delay: shouldReduce ? 0 : 0.1, duration: 0.65, ease: EASE_EXPO }}
+          >
+            <LearnPathDiagram />
+          </motion.div>
+
+          {/* CTA */}
+          <div className="mt-8 flex items-center gap-3 flex-wrap">
+            <Link
+              to="/learn"
+              className="inline-flex items-center gap-2 btn-primary text-white text-sm font-semibold px-6 py-3 rounded-xl"
+            >
+              Enter the Library <ArrowRight size={14} />
+            </Link>
+            <Link
+              to="/learn/roadmap"
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted/80 hover:text-ink px-5 py-3 rounded-xl border border-hairline/[0.08] hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-colors duration-150"
+            >
+              See the roadmap
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── Component showcase — left: Embla carousel | right: text + CTA ── */}
       {/* Distinct bg (#0D0D1E) separates this from the bg-base sections above and below */}
       {/* No overflow-hidden here — the arrow buttons sit outside the carousel track     */}
@@ -338,10 +407,10 @@ export default function Home() {
                 </CarouselContent>
 
                 <CarouselPrevious
-                  className="border-white/10 bg-elevated text-muted hover:bg-indigo-500/10 hover:border-indigo-500/30 hover:text-indigo-400 transition-colors duration-150"
+                  className="border-hairline/10 bg-elevated text-muted hover:bg-indigo-500/10 hover:border-indigo-500/30 hover:text-indigo-400 transition-colors duration-150"
                 />
                 <CarouselNext
-                  className="border-white/10 bg-elevated text-muted hover:bg-indigo-500/10 hover:border-indigo-500/30 hover:text-indigo-400 transition-colors duration-150"
+                  className="border-hairline/10 bg-elevated text-muted hover:bg-indigo-500/10 hover:border-indigo-500/30 hover:text-indigo-400 transition-colors duration-150"
                 />
               </Carousel>
             </div>
@@ -369,7 +438,7 @@ export default function Home() {
       </section>
 
       {/* ── Who is this for — 2×2 grid ── */}
-      <section className="bg-base border-t border-white/[0.05] py-16">
+      <section className="bg-base border-t border-hairline/[0.05] py-16">
         <div className="max-w-4xl mx-auto px-6">
           <h2 className="font-display font-semibold text-[1.25rem] text-ink mb-2">Who uses SystemSim</h2>
           <p className="text-muted text-sm mb-10">Built for engineers who learn by doing, not by reading.</p>
@@ -377,7 +446,7 @@ export default function Home() {
             {WHO_FOR.map((item) => (
               <div
                 key={item.title}
-                className="bg-elevated border border-white/[0.07] rounded-xl p-5 hover:border-indigo-500/20 transition-colors duration-150"
+                className="bg-elevated border border-hairline/[0.07] rounded-xl p-5 hover:border-indigo-500/20 transition-colors duration-150"
               >
                 <span className={`${item.iconBg} ${item.iconColor} w-8 h-8 rounded-lg flex items-center justify-center mb-4`}>
                   {item.icon}
@@ -391,16 +460,16 @@ export default function Home() {
       </section>
 
       {/* ── Three ways to learn — About3-inspired layout ── */}
-      <section className="bg-elevated border-t border-white/[0.05] py-16">
+      <section className="bg-elevated border-t border-hairline/[0.05] py-16">
         <div className="max-w-4xl mx-auto px-6">
 
           {/* 2-column header — title left, description right (from About3) */}
           <div className="mb-10 grid md:grid-cols-2 gap-5 items-end">
             <h2 className="font-display font-semibold text-[1.5rem] text-ink leading-tight">
-              Three ways to learn
+              Four ways to learn
             </h2>
             <p className="text-muted text-sm leading-relaxed">
-              Each mode builds on the last. Work through all three, or jump to where you are in your prep.
+              Read the library, build on the canvas, get scored, and study real incidents. Work through all four, or jump to where you are in your prep.
             </p>
           </div>
 
@@ -492,6 +561,28 @@ export default function Home() {
               </Link>
 
             </div>
+
+            {/* Library — full-width band, the newest pillar */}
+            <Link
+              to="/learn"
+              className="group lg:col-span-3 relative overflow-hidden rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-500/10 via-indigo-500/8 to-sky-500/5 p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center gap-5 hover:border-violet-500/35 transition-colors duration-200"
+            >
+              <div className="absolute inset-0 dot-grid opacity-[0.10]" aria-hidden="true" />
+              <div className="relative flex items-start gap-3.5 flex-1">
+                <span className="shrink-0 bg-violet-500/15 border border-violet-500/25 text-violet-300 rounded-md p-2 flex items-center justify-center">
+                  <Library size={16} />
+                </span>
+                <div>
+                  <span className="font-semibold text-ink text-[1rem]">The Library</span>
+                  <p className="text-muted text-sm leading-relaxed max-w-[62ch] mt-1.5">
+                    A 76-lesson roadmap across modules, core-concept chapters, the 14-component reference, and an interview-prep track — read it like documentation, then jump to the canvas.
+                  </p>
+                </div>
+              </div>
+              <span className="relative shrink-0 flex items-center gap-1.5 text-sm font-semibold text-violet-300 group-hover:text-violet-200 transition-colors duration-150">
+                Enter the Library <ArrowRight size={13} />
+              </span>
+            </Link>
           </div>
 
         </div>
@@ -543,7 +634,7 @@ export default function Home() {
             </Link>
             <Link
               to="/challenges"
-              className="inline-flex items-center gap-2 text-sm font-medium text-muted/80 hover:text-ink px-6 py-3.5 rounded-xl border border-white/[0.08] hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-colors duration-150"
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted/80 hover:text-ink px-6 py-3.5 rounded-xl border border-hairline/[0.08] hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-colors duration-150"
             >
               Browse challenges
             </Link>

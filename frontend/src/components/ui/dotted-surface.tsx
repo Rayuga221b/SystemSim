@@ -27,10 +27,10 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     const AMOUNTX = 40;
     const AMOUNTY = 60;
 
-    // Scene setup — fog fades to our dark base color so distant particles
-    // dissolve into the background rather than remaining hard-edged.
+    // Scene setup — fog fades to the current theme's base color so distant
+    // particles dissolve into the background rather than remaining hard-edged.
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x09090e, 2000, 10000);
+    scene.fog = new THREE.Fog(theme === 'dark' ? 0x0b0e14 : 0xf8f9fc, 2000, 10000);
 
     // Use container dimensions, not window.innerWidth/innerHeight.
     // The canvas must not exceed the section boundary: on large monitors the

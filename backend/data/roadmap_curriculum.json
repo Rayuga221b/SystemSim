@@ -1,0 +1,84 @@
+{
+  "title": "The System Design Roadmap",
+  "subtitle": "76 focused lessons, from first principles to production war stories",
+  "note": "Original lessons restructured from the 'System Design Interview Preparation Series' by Sunchit Dudeja. Ordering and module grouping are our own curriculum design.",
+  "modules": [
+    {
+      "id": "foundations",
+      "label": "Foundations",
+      "blurb": "The mental model every architect shares before a single box is drawn.",
+      "color": "#9B85FF",
+      "days": [1, 2, 3, 4, 5, 6, 22]
+    },
+    {
+      "id": "data-storage",
+      "label": "Databases & Storage",
+      "blurb": "Picking, replicating, sharding, and keying the source of truth.",
+      "color": "#38BDF8",
+      "days": [7, 23, 30, 38, 65, 64, 68, 69, 75, 76]
+    },
+    {
+      "id": "caching",
+      "label": "Caching & Probabilistic Structures",
+      "blurb": "Serve reads fast, and answer 'does this exist?' in microseconds.",
+      "color": "#34E2A1",
+      "days": [9, 19, 43, 15, 16, 37, 10]
+    },
+    {
+      "id": "networking",
+      "label": "Traffic, Proxies & APIs",
+      "blurb": "Getting a request from the client to the right box, and back.",
+      "color": "#FBBF24",
+      "days": [8, 29, 70, 24, 73, 66]
+    },
+    {
+      "id": "messaging",
+      "label": "Messaging & Event-Driven",
+      "blurb": "Queues, logs, ordering, and reliable async between services.",
+      "color": "#F472B6",
+      "days": [36, 34, 46, 31, 39, 55, 62]
+    },
+    {
+      "id": "consistency",
+      "label": "Consistency & Transactions",
+      "blurb": "Correctness when work spans rows, services, and time.",
+      "color": "#A78BFA",
+      "days": [21, 27, 41, 45, 48, 49, 32]
+    },
+    {
+      "id": "resilience",
+      "label": "Resilience & Reliability",
+      "blurb": "Assume everything fails — then keep the system standing.",
+      "color": "#FB7185",
+      "days": [35, 13, 71, 72, 47, 53, 61]
+    },
+    {
+      "id": "scaling",
+      "label": "Scaling & Distribution",
+      "blurb": "Spread load across machines without losing your mind on rebalancing.",
+      "color": "#22D3EE",
+      "days": [11, 28, 54, 44, 17]
+    },
+    {
+      "id": "delivery-ops",
+      "label": "Delivery & Operations",
+      "blurb": "Ship safely, then see what the running system is actually doing.",
+      "color": "#60A5FA",
+      "days": [25, 26, 42, 59, 33, 50, 60]
+    },
+    {
+      "id": "security-chaos",
+      "label": "Security & Chaos",
+      "blurb": "Break it yourself before an attacker or an outage does.",
+      "color": "#F59E0B",
+      "days": [51, 52, 56, 57, 58]
+    },
+    {
+      "id": "patterns-builds",
+      "label": "Patterns & Real Builds",
+      "blurb": "End-to-end walkthroughs where all the pieces come together.",
+      "color": "#818CF8",
+      "days": [12, 14, 40, 18, 20, 67, 63, 74]
+    }
+  ]
+}

@@ -24,7 +24,7 @@ export default function PropertiesPanel({ node }) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-white/[0.06]">
+      <div className="px-4 pt-4 pb-3 border-b border-hairline/[0.06]">
         <div className="flex items-center gap-2.5">
           <span className="w-8 h-8 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}1a` }}>
             <Icon size={15} style={{ color }} aria-hidden />
@@ -80,7 +80,7 @@ export default function PropertiesPanel({ node }) {
                         const v = e.target.value === "" ? f.min : +e.target.value;
                         updateNodeConfig(node.id, f.key, v);
                       }}
-                      className="w-full bg-elevated border border-white/[0.08] rounded-lg px-2.5 py-1.5
+                      className="w-full bg-elevated border border-hairline/[0.08] rounded-lg px-2.5 py-1.5
                                  font-mono text-[12px] text-ink outline-none focus:border-indigo-500/60"
                       aria-label={f.label}
                     />
@@ -89,7 +89,7 @@ export default function PropertiesPanel({ node }) {
                 </label>
               ))}
             </div>
-            <p className="mt-3 font-mono text-[10.5px] text-muted/70 border-t border-white/[0.05] pt-2.5">
+            <p className="mt-3 font-mono text-[10.5px] text-muted/70 border-t border-hairline/[0.05] pt-2.5">
               → {capacitySummary(node.data.type, config)}
             </p>
           </>
@@ -114,7 +114,7 @@ export default function PropertiesPanel({ node }) {
                     className={`text-left px-2.5 py-2 rounded-lg border transition-colors duration-150 ${
                       active
                         ? "border-amber-400/50 bg-amber-400/10"
-                        : "border-white/[0.07] hover:border-white/[0.14] hover:bg-elevated"
+                        : "border-hairline/[0.07] hover:border-hairline/[0.14] hover:bg-elevated"
                     }`}
                   >
                     <span className={`block text-[12px] ${active ? "text-amber-300" : "text-ink/90"}`}>
@@ -130,7 +130,7 @@ export default function PropertiesPanel({ node }) {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-white/[0.06]">
+      <div className="px-4 py-3 border-t border-hairline/[0.06]">
         <button
           type="button"
           onClick={() => removeNode(node.id)}

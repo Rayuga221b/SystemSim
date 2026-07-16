@@ -43,7 +43,7 @@ export default function ResultsPanel() {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Verdict */}
-      <div className="px-4 pt-4 pb-3 border-b border-white/[0.06]">
+      <div className="px-4 pt-4 pb-3 border-b border-hairline/[0.06]">
         <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted/70 mb-2">Verdict</h3>
         <p className={`font-display text-[1.75rem] font-semibold leading-none tabular-nums ${verdictTone}`}>
           {successPct}%
@@ -67,7 +67,7 @@ export default function ResultsPanel() {
 
       {/* Bottlenecks */}
       {result.bottlenecks?.length > 0 && (
-        <div className="px-4 py-3 border-b border-white/[0.06]">
+        <div className="px-4 py-3 border-b border-hairline/[0.06]">
           <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted/70 mb-2">Bottlenecks</h3>
           <div className="flex flex-col gap-1.5">
             {result.bottlenecks.map((id) => {
@@ -95,7 +95,7 @@ export default function ResultsPanel() {
       )}
 
       {/* Tradeoffs */}
-      <div className="px-4 py-3 border-b border-white/[0.06]">
+      <div className="px-4 py-3 border-b border-hairline/[0.06]">
         <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted/70 mb-2.5">Tradeoff profile</h3>
         <div className="flex flex-col gap-2.5">
           {Object.entries(TRADEOFF_LABELS).map(([key, label]) => {
@@ -106,7 +106,7 @@ export default function ResultsPanel() {
                   <span className="text-[11.5px] text-ink/85">{label}</span>
                   <span className="font-mono text-[10.5px] text-muted tabular-nums">{Math.round(v)}</span>
                 </span>
-                <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden" role="img" aria-label={`${label}: ${Math.round(v)} out of 100`}>
+                <div className="h-1.5 rounded-full bg-hairline/[0.05] overflow-hidden" role="img" aria-label={`${label}: ${Math.round(v)} out of 100`}>
                   <div className="h-full rounded-full bg-indigo-500/80 transition-all duration-300" style={{ width: `${v}%` }} />
                 </div>
               </div>
@@ -121,7 +121,7 @@ export default function ResultsPanel() {
 
       {/* Warnings */}
       {result.warnings?.length > 0 && (
-        <div className="px-4 py-3 border-b border-white/[0.06]">
+        <div className="px-4 py-3 border-b border-hairline/[0.06]">
           <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted/70 mb-2">Warnings</h3>
           <ul className="flex flex-col gap-1.5">
             {result.warnings.map((w, i) => (
@@ -165,7 +165,7 @@ export default function ResultsPanel() {
 
 function Chip({ label, value }) {
   if (!value) return null;
-  const tone = { low: "text-emerald-400 border-emerald-500/25", medium: "text-amber-400 border-amber-400/25", high: "text-red-400 border-red-500/25" }[value] || "text-muted border-white/[0.1]";
+  const tone = { low: "text-emerald-400 border-emerald-500/25", medium: "text-amber-400 border-amber-400/25", high: "text-red-400 border-red-500/25" }[value] || "text-muted border-hairline/[0.1]";
   return (
     <span className={`font-mono text-[10px] px-2 py-1 rounded border ${tone}`}>
       {label}: {value}

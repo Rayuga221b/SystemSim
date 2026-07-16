@@ -19,7 +19,10 @@ export default function ComponentCard({ c, index = 0 }) {
         {c.icon}
       </span>
       <div className="text-center px-1">
-        <p className="font-mono text-[9px] sm:text-[10px] lg:text-[11px] font-medium text-ink leading-tight">{c.label}</p>
+        {/* Tile bg (c.grad) is a fixed dark gradient in both themes — label
+            stays a fixed light color instead of theme-reactive `text-ink`,
+            which would go dark-on-dark once the site is in light mode. */}
+        <p className="font-mono text-[9px] sm:text-[10px] lg:text-[11px] font-medium text-white/90 leading-tight">{c.label}</p>
         <p className={`font-mono text-[8px] sm:text-[9px] lg:text-[10px] ${c.iconColor} opacity-50 mt-0.5`}>{c.cat}</p>
       </div>
     </div>

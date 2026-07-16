@@ -123,7 +123,7 @@ export default function CaseStudyDetail() {
             <p className="font-mono text-[10px] text-muted/50 uppercase tracking-[0.14em] mb-3">
               On this page
             </p>
-            <ul className="flex flex-col gap-1 border-l border-white/[0.06]">
+            <ul className="flex flex-col gap-1 border-l border-hairline/[0.06]">
               {TOC.map((t) => (
                 <li key={t.id}>
                   <a
@@ -143,7 +143,7 @@ export default function CaseStudyDetail() {
         <div className="max-w-3xl min-w-0">
 
           {/* Header */}
-          <div className="pt-12 sm:pt-16 pb-8 border-b border-white/[0.05]">
+          <div className="pt-12 sm:pt-16 pb-8 border-b border-hairline/[0.05]">
             <Link to="/case-studies" className="inline-flex items-center gap-1.5 text-[12.5px] text-muted hover:text-ink mb-6">
               <ArrowLeft size={13} /> All case studies
             </Link>
@@ -164,7 +164,7 @@ export default function CaseStudyDetail() {
 
           {/* Scale context */}
           {scale.length > 0 && (
-            <div className="py-6 border-b border-white/[0.05] grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="py-6 border-b border-hairline/[0.05] grid grid-cols-2 sm:grid-cols-4 gap-4">
               {scale.slice(0, 4).map(([k, v]) => (
                 <div key={k}>
                   <p className="font-display text-[1.35rem] font-bold text-ink leading-tight">{v}</p>
@@ -175,7 +175,7 @@ export default function CaseStudyDetail() {
           )}
 
           {/* Problem */}
-          <section id="problem" className="py-10 scroll-mt-24 border-b border-white/[0.04]">
+          <section id="problem" className="py-10 scroll-mt-24 border-b border-hairline/[0.04]">
             <SectionHeading n="01" tone="text-red-400/90 border border-red-500/25 bg-red-500/[0.07]">
               THE PROBLEM
             </SectionHeading>
@@ -183,7 +183,7 @@ export default function CaseStudyDetail() {
           </section>
 
           {/* Solution */}
-          <section id="solution" className="py-10 scroll-mt-24 border-b border-white/[0.04]">
+          <section id="solution" className="py-10 scroll-mt-24 border-b border-hairline/[0.04]">
             <SectionHeading n="02" tone="text-emerald-400/90 border border-emerald-500/25 bg-emerald-500/[0.07]">
               THE SOLUTION
             </SectionHeading>
@@ -207,7 +207,7 @@ export default function CaseStudyDetail() {
                   const Icon = comp.icon;
                   const c = CATEGORY_COLOR[comp.category];
                   return (
-                    <span key={t} className="inline-flex items-center gap-1.5 font-mono text-[10.5px] text-ink/80 bg-surface border border-white/[0.07] rounded px-2 py-1">
+                    <span key={t} className="inline-flex items-center gap-1.5 font-mono text-[10.5px] text-ink/80 bg-surface border border-hairline/[0.07] rounded px-2 py-1">
                       <Icon size={11} style={{ color: c }} aria-hidden /> {comp.label}
                     </span>
                   );
@@ -237,7 +237,7 @@ export default function CaseStudyDetail() {
 
           {/* Lessons */}
           {cs.lessons?.length > 0 && (
-            <section id="lessons" className="pb-10 scroll-mt-24 border-b border-white/[0.04]">
+            <section id="lessons" className="pb-10 scroll-mt-24 border-b border-hairline/[0.04]">
               <SectionHeading n="04">
                 <span className="inline-flex items-center gap-2">
                   <GraduationCap size={18} className="text-indigo-400" aria-hidden /> What to take away
@@ -245,7 +245,7 @@ export default function CaseStudyDetail() {
               </SectionHeading>
               <ol className="flex flex-col gap-3">
                 {cs.lessons.map((l, i) => (
-                  <li key={i} className="flex gap-3.5 bg-surface border border-white/[0.06] rounded-lg px-4 py-3">
+                  <li key={i} className="flex gap-3.5 bg-surface border border-hairline/[0.06] rounded-lg px-4 py-3">
                     <span className="font-mono text-[11px] text-indigo-400 mt-0.5 shrink-0">{String(i + 1).padStart(2, "0")}</span>
                     <span className="font-read text-[0.9375rem] text-ink/90 leading-relaxed">{l}</span>
                   </li>
@@ -266,7 +266,7 @@ export default function CaseStudyDetail() {
             </p>
 
             {answer && (
-              <div className="mb-4 rounded-xl border border-white/[0.07] bg-surface p-5">
+              <div className="mb-4 rounded-xl border border-hairline/[0.07] bg-surface p-5">
                 <p className="text-[12.5px] text-muted mb-3 italic">"{answer.q}"</p>
                 <p className="font-read text-[0.9375rem] text-ink/85 leading-relaxed whitespace-pre-wrap">{answer.a}</p>
               </div>
@@ -281,7 +281,7 @@ export default function CaseStudyDetail() {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder={`e.g. Why didn't ${cs.company} just add more servers?`}
-                className="flex-1 bg-surface border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-[13px] text-ink
+                className="flex-1 bg-surface border border-hairline/[0.08] rounded-lg px-3.5 py-2.5 text-[13px] text-ink
                            placeholder:text-muted/50 outline-none focus:border-indigo-500/60"
                 aria-label="Your question about this case study"
               />

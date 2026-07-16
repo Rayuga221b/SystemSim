@@ -61,7 +61,7 @@ export default function Login() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-surface border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-[13.5px] text-ink
+              className="w-full bg-surface border border-hairline/[0.08] rounded-lg px-3.5 py-2.5 text-[13.5px] text-ink
                          placeholder:text-muted/50 outline-none focus:border-indigo-500/60"
               placeholder="you@example.com"
             />
@@ -75,7 +75,7 @@ export default function Login() {
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-surface border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-[13.5px] text-ink
+              className="w-full bg-surface border border-hairline/[0.08] rounded-lg px-3.5 py-2.5 text-[13.5px] text-ink
                          placeholder:text-muted/50 outline-none focus:border-indigo-500/60"
               placeholder={mode === "register" ? "At least 8 characters" : "••••••••"}
             />
