@@ -22,4 +22,15 @@ React + Vite. Loaded when working in `frontend/`.
 - Tailwind for layout, shadcn/ui for primitives. No other UI kit.
 - Keep API response types mirrored from `docs/spec.md` output schema.
 - State that's purely visual (panel open/closed) → `uiSlice`, not local state
-  if more than one component needs it.
+  if more than one component needs it. Exception: theme (light/dark) is owned
+  by `next-themes` (`ThemeProvider` in `main.jsx`, `useTheme()` in
+  `components/ui/ThemeToggle.jsx`), not `uiSlice` — it was already the
+  established mechanism (persistence + `<html>` class toggling) before
+  `uiSlice` existed, no reason to duplicate it in Zustand.
+- Never hardcode chrome colors (`white/[alpha]` borders, `#hex` grays, etc.).
+  `base/surface/elevated/dim/ink/muted/hairline` are CSS-var-backed
+  (`index.css` `:root` / `:root.light`) so every usage repaints for light/dark
+  automatically — see `frontend/DESIGN.md` "Color tokens" and "Light / dark
+  mode". The one deliberate exception is a fixed-dark surface that must never
+  follow the site theme (e.g. `SplashLoader.jsx`, `ComponentCard.jsx`'s
+  always-dark gradient tiles) — those use literal hex/white, not the tokens.

@@ -6,29 +6,52 @@ Product (design serves the tool; clarity over decoration).
 
 ## Theme
 
-Dark technical. The scene: an engineer in a focused study session. Not a marketing page — a real tool. Borrowed cues from Linear and Figma.
+Dark technical is the default/primary identity — the scene: an engineer in a
+focused study session. Not a marketing page — a real tool. Borrowed cues from
+Linear and Figma. Light mode is a full, supported second theme (see "Light /
+dark mode" under Decisions) — dark is just what a fresh session opens to.
 
 ## Color tokens
 
-| Token      | Value     | Usage                                      |
-|------------|-----------|--------------------------------------------|
-| `base`     | `#0B0E14`  | Page background                            |
-| `surface`  | `#12161F`  | Card / panel backgrounds                   |
-| `elevated` | `#1A2030`  | Raised surfaces, hover backgrounds         |
-| `dim`      | `#262E42`  | Borders, dividers                          |
-| `ink`      | `#F3F5FA`  | Primary text (high contrast)               |
-| `muted`    | `#8D97B0`  | Secondary text (≥4.5:1 on base/surface)    |
+All six are CSS variables (`--color-*` in `index.css`, RGB triplets), not
+static hex — `tailwind.config.js` maps them through
+`rgb(var(--color-x) / <alpha-value>)` so opacity modifiers (`bg-surface/50`)
+keep working. `:root` holds the dark values (below); `:root.light` overrides
+all of them at once. next-themes toggles the `.light` class on `<html>`.
+
+| Token      | Dark value | Light value | Usage                                      |
+|------------|-----------|-------------|---------------------------------------------|
+| `base`     | `#0B0E14`  | `#F8F9FC`  | Page background                            |
+| `surface`  | `#12161F`  | `#FFFFFF`  | Card / panel backgrounds                   |
+| `elevated` | `#1A2030`  | `#F1F2F8`  | Raised surfaces, hover backgrounds         |
+| `dim`      | `#262E42`  | `#DFE2EC`  | Borders, dividers                          |
+| `ink`      | `#F3F5FA`  | `#12151F`  | Primary text (high contrast)               |
+| `muted`    | `#8D97B0`  | `#5B6478`  | Secondary text (≥4.5:1 on base/surface)    |
+
+`hairline` (also CSS-var-backed: white in dark mode, `#0F121A`-ish in light)
+replaces the old habit of hand-rolling a hairline border/hover wash with
+`white/[alpha]` directly on an element — that only worked because the page
+was assumed to always be dark. Use `border-hairline/[0.06]`,
+`hover:bg-hairline/[0.05]`, etc.; never reach for bare `white/[alpha]` for
+chrome again (it's still correct for things like `SplashLoader`, which is
+intentionally dark in both themes — see Decisions).
 
 Brand accent: `indigo-500` (#7C5CFF — violet; the Tailwind `indigo` scale is
 fully overridden in `tailwind.config.js`, so every existing `indigo-*` class
 repaints without renaming). Used for interactive elements, current state
-indicators, and primary actions only — not decoration.
+indicators, and primary actions only — not decoration. Steps `200`/`300`/`400`
+of that scale (and the equivalent light steps of `amber`/`emerald`/`sky`/`red`
+— `300`/`400`, plus `red-500`) are ALSO CSS-var-backed, because those are the
+steps used as text/link color: fine light-on-dark, but the same lightness is
+1.4–2.8:1 on a light bg. Light mode swaps them for darker steps of the same
+scale (5–9:1). Everything else in each scale (50/100/500/600/700/800/900/950)
+stays a static hex — only the shades actually used as text needed the swap.
 
 Second accent: `mint` (#34E2A1). Reserved strictly for "healthy" /
 "simulating" states (sandbox node status, results panel). Never decorative —
 if it's on screen, something is actually good or actively running.
 
-Warning / bottleneck: `amber-400` (#FBBF24). Semantic only.
+Warning / bottleneck: `amber-400` (#FBBF24 dark / `#B45309` light). Semantic only.
 
 No third gradient accent. Cyan (#06B6D4) is retired from the palette.
 
@@ -189,3 +212,55 @@ code. Changes, with the reasoning worth being able to speak to:
   (`components/home/LearnPathDiagram.jsx` — self-contained, no external asset).
   "Who uses SystemSim" and the (now) "Four ways to learn" grid were rewritten to
   include the self-study roadmap as a first-class pillar.
+
+**Light / dark mode — DECISION (2026-07-16):** Satyam asked for full light/dark
+theming without breaking the existing palette. `next-themes` was already a
+dependency and half-wired (`ThemeProvider` in `main.jsx`, `DottedSurface`
+already branching particle color on `theme`) but locked with
+`forcedTheme="dark"` — this turns that on rather than building parallel
+infrastructure.
+
+- **Mechanism: CSS variables, not `dark:` classnames.** `base/surface/
+  elevated/dim/ink/muted` + the new `hairline` token became CSS-var-backed
+  colors (see table above) toggled by a `.light` class on `<html>`
+  (`darkMode: ["class"]` in `tailwind.config.js`, attribute="class" in
+  next-themes). WHY over sprinkling `dark:` variants everywhere: the app
+  already used these six semantic tokens consistently on every surface, so
+  swapping the variable definitions repainted the entire app with zero
+  per-component edits — versus manually pairing a `dark:` override onto every
+  `bg-base`/`text-ink`/etc. call site.
+- **`white/[alpha]` overlay hack → `hairline`.** ~130 call sites across 20
+  files used `border-white/[0.06]`, `hover:bg-white/[0.05]`, etc. as a
+  hairline border/hover wash — correct only because the page was always dark.
+  Mechanically renamed to `hairline/[alpha]` (same alpha values), backed by a
+  var that's white in dark mode and near-ink in light mode. `SplashLoader.jsx`
+  was deliberately excluded — its background is a hardcoded dark full-screen
+  overlay in both themes (a branded loading screen, not themed UI), so its
+  `white/[alpha]` accents are correct as literal white and must stay that way.
+- **Status-color text steps needed the same treatment as the accent scale.**
+  `indigo-200/300/400` and the equivalent `amber/emerald/sky` `300/400` (plus
+  `red-300/400/500`) are the *pastel* steps of each scale, used throughout as
+  link/label/warning/healthy/error text (30+ call sites for indigo alone).
+  Fine light-on-dark (light mode has been shipping this in dark-only for a
+  while); on white they measured 1.4–2.8:1 — a real WCAG-failing "looks
+  broken" bug, not a nitpick. CSS-var-backed the same way, swapped to darker
+  steps of the same scale in light mode (5–9:1). The rest of each scale
+  (500/600/700/800/900/950, used for backgrounds/borders/solid CTAs) was left
+  alone — it already reads fine on both themes.
+- **One real contrast bug found and fixed, not just theoretical:**
+  `ComponentCard.jsx` (the Home page's 14-component showcase tiles) has a
+  fixed-dark gradient background in both themes by design (`from-*-900/70`
+  gradients, meant to always read as colorful dark chips). Its label used
+  theme-reactive `text-ink`, and four of its icon colors reused
+  `text-indigo-300`/`text-sky-300`/`text-amber-300`/`text-emerald-300` — the
+  exact classes just made theme-reactive above. Both would have gone
+  dark-on-dark in light mode. Fixed by hardcoding those specific values
+  (`text-white/90` for the label, literal hex for the four icon colors) since
+  this tile's background never follows the site theme.
+- **Toggle:** `components/ui/ThemeToggle.jsx` (sun/moon icon, `next-themes`'
+  `useTheme()` directly — not routed through `uiSlice`; see `frontend/
+  CLAUDE.md`), in the Navbar desktop bar and mobile menu.
+- **Default stays dark, no OS-following.** `defaultTheme="dark"`,
+  `enableSystem={false}` — a first-time visitor sees dark; light is an
+  explicit opt-in via the toggle, not a silent repaint when the OS theme
+  changes underneath the user.

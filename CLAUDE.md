@@ -27,6 +27,11 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   JWT). Local via docker-compose; AWS later. (Swapped from Supabase — see
   "Auth swap" note under Decisions.)
 - AI: Claude API — model `claude-sonnet-4-20250514` (see NOTE under Decisions)
+  for in-app features (explain/mentor). Roadmap ingest uses **Gemini**
+  (`GEMINI_MODEL`, default `gemini-3.5-flash`) — isolated provider, see
+  "Ingest uses Gemini" under Decisions.
+- Content rendering: `react-markdown` + `remark-gfm` + `rehype-highlight`
+  (roadmap lessons), `mermaid` (flowcharts). Long-form only; UI stays on Prose.
 - Hosting: Vercel (frontend), AWS (backend + Postgres) — was Render/Supabase
 
 ---
@@ -44,6 +49,31 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   keeps logic generic.
 - **Case studies are AI-structured summaries, never raw scraped HTML.** WHY:
   copyright-safe, consistent shape, small to store.
+- **Learn Roadmap content lives in the DB, not JSON — the deliberate exception
+  to "content = JSON".** DECISION (2026-07-16): the 76-lesson System Design
+  Roadmap is a `roadmap_lessons` table (`backend/models/roadmap_lesson.py`),
+  served via `GET /roadmap` + `/roadmap/{slug}`. WHY: it's long-form, growing
+  content that wants per-lesson queries, published/draft state, and later
+  per-user progress — not a blob loaded whole. Curriculum grouping/order is
+  config (`data/roadmap_curriculum.json`), lesson bodies are data (DB).
+- **Roadmap lessons are ORIGINAL, AI-restructured content — same copyright-safe
+  principle as case studies.** The source series (Sunchit Dudeja, NO license =
+  all rights reserved) is used ONLY as reference input to the ingest pipeline
+  (`services/roadmap_ingest.py`): fetched at ingest time, cached to a gitignored
+  dir, NEVER committed or served verbatim. The model rewrites each doc into an
+  original lesson. Nothing verbatim is stored.
+- **Ingest uses Gemini; in-app AI stays Claude.** DECISION (2026-07-16): we had
+  a Gemini key, not Anthropic, so roadmap ingestion runs on an isolated Gemini
+  provider (`services/gemini.py`, REST, no SDK, `GEMINI_MODEL` env). The runtime
+  AI features (explain/mentor) remain on Claude. WHY isolate: the ingest is a
+  one-time content batch; keeping providers separate means the swap touches
+  nothing else. Robustness: Gemini `responseSchema` (valid JSON for the large
+  body) + 429/503 retry with backoff for the free-tier daily quota.
+- **Diagrams are our own assets, never the source's.** Flowcharts render via
+  **Mermaid** (```mermaid blocks → themed SVG, `components/ui/Mermaid.jsx`);
+  static figures are hand-authored SVGs in `backend/static/roadmap/diagrams/`
+  (served from `/static`). WHY not the source's `.excalidraw`: same copyright
+  reason as the text. The ingest prompt requires Mermaid for flows, never ASCII.
 - **All frontend network calls go through `frontend/src/api/`.** No `fetch`
   anywhere else. WHY: one place to add auth headers, base URLs, error handling.
 - **Zustand is split into slices:** `canvas`, `simulation`, `ui`, `auth`.
