@@ -1,9 +1,10 @@
-"""Gemini provider — used ONLY by the roadmap ingest pipeline.
+"""Gemini provider — roadmap ingest pipeline + the simulation explainer.
 
-WHY separate from services/claude.py: the in-app AI features (explain/mentor)
-stay on Claude (pinned in CLAUDE.md). The roadmap ingest is a one-time content
-batch, and the key we have is for Gemini — so this provider is isolated here and
-documented as a decision in BACKEND_LOG.md.
+WHY separate from services/claude.py: providers stay isolated so a swap
+touches nothing else. Originally ingest-only; DECISION (2026-07-25) moved the
+in-app simulation explainer here too (services/ai_explain.py) because Gemini
+is the key we actually have. The case-study mentor remains on Claude. Both
+decisions are logged in CLAUDE.md / BACKEND_LOG.md.
 
 REST via urllib (no new SDK dependency). Model id lives in ONE place: the
 GEMINI_MODEL env var (default below). Set GEMINI_API_KEY in backend/.env.

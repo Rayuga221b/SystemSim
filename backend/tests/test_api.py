@@ -157,6 +157,73 @@ def test_case_studies_list_and_detail(client):
 
 
 # --------------------------------------------------------------------- ai
-def test_ai_returns_503_without_api_key(client):
+# The explainer runs on Gemini (services/ai_explain.py), the mentor on Claude.
+# Tests never touch either provider: keys are stripped via monkeypatch (503
+# path) and the Gemini call is mocked (success path) — robust regardless of
+# what .env contains.
+
+def test_ai_explain_returns_503_without_gemini_key(client, monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    r = client.post("/ai/explain", json={"graph": SIMPLE_GRAPH, "result": {}})
+    assert r.status_code == 503
+
+
+def test_ai_mentor_returns_503_without_anthropic_key(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    slug = client.get("/casestudies").json()["case_studies"][0]["slug"]
+    r = client.post("/ai/mentor", json={"case_study_slug": slug, "question": "Why?"})
+    assert r.status_code == 503
+
+
+def test_ai_explain_returns_structured_explanation(client, monkeypatch):
+    import json
+    from services import ai_explain
+
+    fake = {
+        "summary": "Your app server saturates first.",
+        "bottlenecks": [
+            {"node_id": "a1", "label": "App Server", "why": "4 instances cap out.",
+             "fix": "Scale to 8 instances."},
+        ],
+        "suggested_fixes": ["Add a cache in front of the database."],
+    }
+    captured = {}
+
+    def fake_generate_json(system, user, **kwargs):
+        captured["system"] = system
+        captured["user"] = user
+        captured["schema"] = kwargs.get("response_schema")
+        return json.dumps(fake)
+
+    monkeypatch.setattr(ai_explain, "generate_json", fake_generate_json)
+
+    result = {
+        "node_statuses": {"c1": "healthy", "a1": "overloaded", "d1": "healthy"},
+        "bottlenecks": ["a1"],
+        "node_metrics": {"a1": {"in_rps": 1000, "capacity_rps": 400,
+                                "utilization_pct": 250, "latency_ms": 20}},
+        "throughput_requested_rps": 1000,
+        "throughput_achieved_rps": 400,
+        "critical_path_latency_ms": 60,
+        "warnings": [],
+        "tradeoffs": {},
+    }
+    r = client.post("/ai/explain", json={"graph": SIMPLE_GRAPH, "result": result})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["summary"] == fake["summary"]
+    assert body["bottlenecks"][0]["node_id"] == "a1"
+    assert body["bottlenecks"][0]["why"] and body["bottlenecks"][0]["fix"]
+    assert body["suggested_fixes"] == fake["suggested_fixes"]
+    # Prompt is context-scoped: the concrete graph and result are in it.
+    assert "a1 | app_server" in captured["user"]
+    assert "overloaded" in captured["user"]
+    assert captured["schema"] is not None  # controlled generation, not free text
+
+
+def test_ai_explain_returns_503_on_malformed_model_output(client, monkeypatch):
+    from services import ai_explain
+
+    monkeypatch.setattr(ai_explain, "generate_json", lambda *a, **k: "not json {")
     r = client.post("/ai/explain", json={"graph": SIMPLE_GRAPH, "result": {}})
     assert r.status_code == 503

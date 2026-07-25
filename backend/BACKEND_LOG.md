@@ -314,3 +314,69 @@ TODO:
 - [ ] Diagram pre-render step (.excalidraw → SVG) — superseded: we author original SVGs instead
 - [ ] Alembic revision for `roadmap_lessons` before Postgres deploy
 - [ ] Optional: per-user lesson progress table (currently localStorage only)
+
+---
+
+## 2026-07-25 — Simulation explainer moved to Gemini (structured output)
+
+Context: `POST /ai/explain` shipped on Claude in the big build, but the
+Anthropic key was never real — the feature 503'd (or worse, 500'd against the
+placeholder key) since day one. Satyam's call today: run the explainer on the
+**Gemini provider we already have** (`services/gemini.py`, the ingest
+provider). This explicitly overrides the earlier "in-app AI stays Claude"
+note; the case-study mentor stays on Claude untouched. Recorded in CLAUDE.md
+Decisions; full architecture write-up in `docs/AI_INTEGRATION.md`.
+
+### 1. New service — `services/ai_explain.py`
+
+The route stays thin; all logic lives here. Three decisions worth owning:
+
+- **Structured output, not prose.** The old Claude version returned a text
+  blob. The Gemini version uses controlled generation (`responseSchema`, same
+  technique the roadmap ingest proved out) so the response is
+  guaranteed-parseable JSON: `summary`, `bottlenecks[{node_id, label, why,
+  fix}]`, `suggested_fixes[]`. The frontend renders sections and per-node
+  cards instead of a wall of text, and `propertyOrdering` makes the model
+  commit to the summary verdict before arguing details.
+- **Compact context serialization.** The prompt gets a line-per-node text form
+  (`id | type | label | config`) plus edges as `source -> target` — not raw
+  canvas JSON (no positions, no React Flow noise). The sim result is slimmed
+  to statuses, bottleneck list, metrics for *non-healthy nodes only*,
+  throughput, warnings, tradeoffs. Context-scoped as always (project rule) and
+  token cost stays flat even at the 60-node graph cap.
+- **Off-contract output → 503, not garbage.** Unparseable JSON or a
+  wrong-shape response raises `AIUnavailable` — the UI shows its friendly
+  fallback rather than half-rendering. `_validate` also drops malformed
+  bottleneck entries and caps fixes at 3.
+
+Gotcha found while curling the live endpoint: on Gemini 2.5+/3.5, internal
+"thinking" tokens count against `maxOutputTokens` — 1024 truncated real
+responses mid-JSON. Cap is 4096 now (the visible JSON stays small; the cap
+only guards runaway cost).
+
+### 2. Route + provider seam — `routes/ai.py`, `services/gemini.py`
+
+`/ai/explain` now imports `services.ai_explain` and catches Gemini's
+`AIUnavailable`; `/ai/mentor` still imports `services.claude` and catches
+Claude's. Two exception classes on purpose — the providers stay fully
+isolated, and each maps to the same 503 contract. `services/gemini.py` needed
+zero new code (its `generate_json` was already general: schema optional);
+only its "ingest-only" docstring changed.
+
+### 3. Tests — `tests/test_api.py`
+
+The old `test_ai_returns_503_without_api_key` was env-fragile: conftest pops
+`ANTHROPIC_API_KEY` before importing `main`, but `load_dotenv()` in main.py
+re-loads the placeholder key from `.env`, so the explain call reached the
+Anthropic SDK and 500'd. Replaced with four robust tests that never touch a
+provider: explain 503 (monkeypatch-delete `GEMINI_API_KEY`), mentor 503
+(delete `ANTHROPIC_API_KEY`), a mocked-Gemini success path asserting the
+structured shape AND that the prompt is context-scoped (graph + statuses in
+it, schema passed), and malformed-model-output → 503. Suite: 51 passed.
+
+### Open items
+
+- [ ] Rate limiting on `/ai/*` before public deploy (unchanged, now more
+      urgent — explain calls burn free-tier Gemini quota)
+- [ ] Frontend mentor UI still pending an Anthropic key (mentor stays 503
+      until then — graceful)

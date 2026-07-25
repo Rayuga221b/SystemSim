@@ -96,6 +96,8 @@ export const api = {
   deleteDesign: (id) => request(`/designs/${id}`, { method: "DELETE", auth: true }),
 
   // ── ai ────────────────────────────────────────────────────────────────────
+  // → { summary, bottlenecks: [{node_id, label, why, fix}], suggested_fixes }
+  // Gemini runs server-side only — the frontend never holds an AI key.
   explain: (graph, result) =>
     request("/ai/explain", { method: "POST", body: { graph, result } }),
   mentor: (case_study_slug, question) =>

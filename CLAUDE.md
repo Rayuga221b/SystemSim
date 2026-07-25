@@ -26,10 +26,12 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
 - DB/Auth: self-hosted Postgres + custom FastAPI auth (SQLAlchemy + Alembic +
   JWT). Local via docker-compose; AWS later. (Swapped from Supabase — see
   "Auth swap" note under Decisions.)
-- AI: Claude API — model `claude-sonnet-4-20250514` (see NOTE under Decisions)
-  for in-app features (explain/mentor). Roadmap ingest uses **Gemini**
-  (`GEMINI_MODEL`, default `gemini-3.5-flash`) — isolated provider, see
-  "Ingest uses Gemini" under Decisions.
+- AI: split by feature — the **simulation explainer** and roadmap ingest run
+  on **Gemini** (`GEMINI_MODEL`, default `gemini-3.5-flash`, isolated provider
+  `services/gemini.py`); the **case-study mentor** stays on Claude API — model
+  `claude-sonnet-4-20250514` (see NOTE under Decisions). See "Ingest uses
+  Gemini" and "Explainer on Gemini" under Decisions, and
+  `docs/AI_INTEGRATION.md` for the full architecture.
 - Content rendering: `react-markdown` + `remark-gfm` + `rehype-highlight`
   (roadmap lessons), `mermaid` (flowcharts). Long-form only; UI stays on Prose.
 - Hosting: Vercel (frontend), AWS (backend + Postgres) — was Render/Supabase
@@ -69,6 +71,15 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   one-time content batch; keeping providers separate means the swap touches
   nothing else. Robustness: Gemini `responseSchema` (valid JSON for the large
   body) + 429/503 retry with backoff for the free-tier daily quota.
+- **Explainer on Gemini.** DECISION (2026-07-25, Satyam's call — overrides the
+  earlier "in-app AI stays Claude" note): the simulation explainer
+  (`POST /ai/explain`) runs on the existing Gemini provider
+  (`services/gemini.py` → `services/ai_explain.py`) because Gemini is the key
+  we actually have; the placeholder Anthropic key meant the feature 503'd in
+  practice. Returns structured JSON (summary / per-bottleneck WHY + fix /
+  suggested fixes) via Gemini `responseSchema`. The case-study mentor stays on
+  Claude (`services/claude.py`) — provider isolation means swapping either
+  back is a one-import change. Full write-up: `docs/AI_INTEGRATION.md`.
 - **Diagrams are our own assets, never the source's.** Flowcharts render via
   **Mermaid** (```mermaid blocks → themed SVG, `components/ui/Mermaid.jsx`);
   static figures are hand-authored SVGs in `backend/static/roadmap/diagrams/`

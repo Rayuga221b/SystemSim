@@ -1,15 +1,23 @@
-"""POST /ai/explain, POST /ai/mentor — context-scoped Claude calls.
+"""POST /ai/explain, POST /ai/mentor — context-scoped AI calls.
 
 Both endpoints ALWAYS include concrete context (graph state or case-study
 text) in the prompt. No open-ended chat. 503 when no API key is configured.
+
+Providers are split on purpose (see CLAUDE.md Decisions, 2026-07-25):
+/ai/explain runs on Gemini (services/ai_explain.py — the key we have),
+/ai/mentor stays on Claude (services/claude.py). Each raises its own
+AIUnavailable; the route maps both to the same 503 contract.
 """
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from services.claude import AIUnavailable, case_study_mentor, explain_simulation
+from services import ai_explain
+from services.claude import AIUnavailable as ClaudeUnavailable
+from services.claude import case_study_mentor
 from services.content import get_case_study
+from services.gemini import AIUnavailable as GeminiUnavailable
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -27,8 +35,8 @@ class MentorRequest(BaseModel):
 @router.post("/explain")
 def explain(req: ExplainRequest):
     try:
-        return {"answer": explain_simulation(req.graph, req.result)}
-    except AIUnavailable as e:
+        return ai_explain.explain_simulation(req.graph, req.result)
+    except GeminiUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e))
 
 
@@ -39,5 +47,5 @@ def mentor(req: MentorRequest):
         raise HTTPException(status_code=404, detail="Case study not found")
     try:
         return {"answer": case_study_mentor(cs, req.question)}
-    except AIUnavailable as e:
+    except ClaudeUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e))

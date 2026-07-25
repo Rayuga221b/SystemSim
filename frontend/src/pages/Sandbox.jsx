@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ReactFlowProvider } from "reactflow";
-import { PanelLeftClose, PanelLeftOpen, MousePointerClick, BarChart3, X } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, MousePointerClick, BarChart3, X, Sparkles, Loader2 } from "lucide-react";
 import { useStore } from "@/store";
 import { PRESETS } from "@/lib/presets";
 import CanvasArea from "@/components/canvas/CanvasArea";
@@ -12,6 +12,7 @@ import Palette from "@/components/sidebar/Palette";
 import PropertiesPanel from "@/components/panels/PropertiesPanel";
 import ResultsPanel from "@/components/panels/ResultsPanel";
 import LearnDrawer from "@/components/panels/LearnDrawer";
+import AIExplainDrawer from "@/components/panels/AIExplainDrawer";
 import SaveDesignModal from "@/components/panels/SaveDesignModal";
 
 export default function Sandbox() {
@@ -26,6 +27,9 @@ export default function Sandbox() {
   const paletteOpen = useStore((s) => s.paletteOpen);
   const setPaletteOpen = useStore((s) => s.setPaletteOpen);
   const setSaveModalOpen = useStore((s) => s.setSaveModalOpen);
+  const simRunning = useStore((s) => s.simRunning);
+  const explainSimulation = useStore((s) => s.explainSimulation);
+  const explainLoading = useStore((s) => s.explainLoading);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
@@ -113,6 +117,26 @@ export default function Sandbox() {
             </div>
           )}
 
+          {/* Floating "Ask AI" affordance — appears once a result exists, sits
+              just above the minimap so it never covers the graph itself. */}
+          {simResult && !simRunning && (
+            <button
+              type="button"
+              onClick={explainSimulation}
+              disabled={explainLoading}
+              aria-label="Ask AI to explain this simulation"
+              className="absolute bottom-[11.75rem] right-4 z-10 flex items-center gap-2
+                         bg-surface/90 backdrop-blur border border-indigo-500/30 rounded-full pl-3 pr-3.5 py-2
+                         text-[12px] font-medium text-indigo-300 shadow-lg shadow-black/30
+                         hover:bg-indigo-500/[0.12] hover:border-indigo-500/45 transition-colors disabled:opacity-60"
+            >
+              {explainLoading
+                ? <Loader2 size={13} className="animate-spin" aria-hidden />
+                : <Sparkles size={13} aria-hidden />}
+              Ask AI
+            </button>
+          )}
+
           {showSaveNudge && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3
                              bg-surface/95 backdrop-blur border border-indigo-500/25 rounded-full pl-4 pr-2 py-2
@@ -164,6 +188,7 @@ export default function Sandbox() {
         )}
 
         <LearnDrawer />
+        <AIExplainDrawer />
         <SaveDesignModal />
       </div>
     </ReactFlowProvider>

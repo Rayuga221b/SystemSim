@@ -24,8 +24,7 @@ export default function ResultsPanel() {
   const selectNode = useStore((s) => s.selectNode);
   const explainSimulation = useStore((s) => s.explainSimulation);
   const explainLoading = useStore((s) => s.explainLoading);
-  const explainText = useStore((s) => s.explainText);
-  const explainError = useStore((s) => s.explainError);
+  const explanation = useStore((s) => s.explanation);
 
   if (!result) return null;
 
@@ -41,7 +40,8 @@ export default function ResultsPanel() {
     successPct >= 99 ? "text-emerald-400" : successPct >= 80 ? "text-amber-400" : "text-red-400";
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 min-h-0 overflow-y-auto">
       {/* Verdict */}
       <div className="px-4 pt-4 pb-3 border-b border-hairline/[0.06]">
         <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted/70 mb-2">Verdict</h3>
@@ -134,30 +134,22 @@ export default function ResultsPanel() {
         </div>
       )}
 
-      {/* AI explain */}
-      <div className="px-4 py-3">
-        {!explainText && (
-          <button
-            type="button"
-            onClick={explainSimulation}
-            disabled={explainLoading}
-            className="w-full flex items-center justify-center gap-2 border border-indigo-500/30 bg-indigo-500/[0.08]
-                       hover:bg-indigo-500/[0.14] text-indigo-300 text-[12.5px] font-medium rounded-lg px-3 py-2
-                       transition-colors disabled:opacity-50"
-          >
-            {explainLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-            {explainLoading ? "Thinking…" : "Explain my design"}
-          </button>
-        )}
-        {explainError && <p className="mt-2 text-[11.5px] text-muted">{explainError}</p>}
-        {explainText && (
-          <div className="mt-1">
-            <h3 className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-indigo-300/80 mb-2">
-              <Sparkles size={11} aria-hidden /> AI walkthrough
-            </h3>
-            <p className="text-[12px] text-ink/85 leading-relaxed whitespace-pre-wrap">{explainText}</p>
-          </div>
-        )}
+      </div>
+
+      {/* AI explain — fixed footer so it's reachable however long the results
+          get; opens the walkthrough drawer (loading/error handled there). */}
+      <div className="shrink-0 px-4 py-3 border-t border-hairline/[0.06] bg-surface/95">
+        <button
+          type="button"
+          onClick={explainSimulation}
+          disabled={explainLoading}
+          className="w-full flex items-center justify-center gap-2 border border-indigo-500/30 bg-indigo-500/[0.08]
+                     hover:bg-indigo-500/[0.14] text-indigo-300 text-[12.5px] font-medium rounded-lg px-3 py-2
+                     transition-colors disabled:opacity-50"
+        >
+          {explainLoading ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Sparkles size={14} aria-hidden />}
+          {explainLoading ? "Thinking…" : explanation ? "View AI walkthrough" : "Explain my design"}
+        </button>
       </div>
     </div>
   );

@@ -4,9 +4,11 @@ export const createUiSlice = (set) => ({
   resultsOpen: false,   // opens automatically after a simulation
   learnComponent: null, // component type whose concept card is open, or null
   saveModalOpen: false,
+  explainOpen: false,   // AI explanation drawer (fetch state lives in simulationSlice)
 
   setPaletteOpen: (open) => set({ paletteOpen: open }),
   setResultsOpen: (open) => set({ resultsOpen: open }),
+  setExplainOpen: (open) => set({ explainOpen: open }),
   openLearn: (type) => set({ learnComponent: type }),
   closeLearn: () => set({ learnComponent: null }),
   setSaveModalOpen: (open) => set({ saveModalOpen: open }),

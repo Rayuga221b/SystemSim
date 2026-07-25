@@ -214,6 +214,9 @@
 .mermaid-svg svg {
   max-width: 100%;
   height: auto;
+  /* Keep diagrams a readable size: tall flowcharts cap at ~28rem and scale
+     down proportionally instead of dominating the page. */
+  max-height: 28rem;
 }
 .mermaid-svg .node,
 .mermaid-svg .actor {

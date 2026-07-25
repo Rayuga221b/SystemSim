@@ -11,9 +11,10 @@ export const createSimulationSlice = (set, get) => ({
   simResult: null,
   simError: null,
 
-  // AI explanation of the last result
+  // AI explanation of the last result — structured from the backend:
+  // { summary, bottlenecks: [{node_id, label, why, fix}], suggested_fixes }
   explainLoading: false,
-  explainText: null,
+  explanation: null,
   explainError: null,
 
   setLoadRps: (loadRps) => set({ loadRps }),
@@ -29,7 +30,7 @@ export const createSimulationSlice = (set, get) => ({
   clearFailures: () => set({ failures: {} }),
 
   clearSimResult: () =>
-    set({ simResult: null, simError: null, explainText: null, explainError: null }),
+    set({ simResult: null, simError: null, explanation: null, explainError: null, explainOpen: false }),
 
   runSimulation: async () => {
     const { serializeGraph, loadRps, readPct, failures } = get();
@@ -38,7 +39,7 @@ export const createSimulationSlice = (set, get) => ({
       set({ simError: "Add a Client node — the simulation needs a traffic source.", simResult: null });
       return;
     }
-    set({ simRunning: true, simPhase: "propagating", simError: null, explainText: null, explainError: null });
+    set({ simRunning: true, simPhase: "propagating", simError: null, explanation: null, explainError: null, explainOpen: false });
 
     // The engine answers in ~10ms, which reads as "preloaded" and cheapens the
     // result. Stage the run over ~1.4s with honest-sounding phases so the user
@@ -67,16 +68,23 @@ export const createSimulationSlice = (set, get) => ({
     }
   },
 
+  // Open the AI drawer and fetch the explanation for the current result.
+  // Cached per result (a new run clears it) — reopening is free, and retrying
+  // after an error just calls this again.
   explainSimulation: async () => {
-    const { serializeGraph, simResult } = get();
+    const { serializeGraph, simResult, explanation, explainLoading } = get();
     if (!simResult) return;
+    set({ explainOpen: true });
+    if (explanation || explainLoading) return;
     set({ explainLoading: true, explainError: null });
     try {
       const res = await api.explain(serializeGraph(), simResult);
-      set({ explainText: res.answer, explainLoading: false });
+      set({ explanation: res, explainLoading: false });
     } catch (err) {
+      // 503 covers both "no key configured" and "provider over quota" —
+      // don't claim it's unconfigured when it may just need a minute.
       const msg = err.status === 503
-        ? "AI explanations aren't configured on this server yet."
+        ? "The AI mentor isn't available right now — the server may be missing an API key or briefly over its quota. Try again in a minute."
         : err.message;
       set({ explainError: msg, explainLoading: false });
     }
