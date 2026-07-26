@@ -5,9 +5,8 @@
 @layer base {
   /* Theme tokens — RGB triplets (no `rgb()` wrapper) so Tailwind's
      `rgb(var(--x) / <alpha-value>)` color functions in tailwind.config.js
-     can apply opacity modifiers. Dark is the default/primary identity (see
-     DESIGN.md "Dark technical"); `.light` overrides everything at once.
-     next-themes sets this class on <html> via ThemeProvider (main.jsx). */
+     can apply opacity modifiers. Dark technical is the app's only theme
+     (see DESIGN.md "Dark technical"). */
   :root {
     --color-base:     11 14 20;    /* #0B0E14 */
     --color-surface:  18 22 31;    /* #12161F */
@@ -36,35 +35,6 @@
     color-scheme: dark;
   }
 
-  :root.light {
-    --color-base:     248 249 252; /* #F8F9FC */
-    --color-surface:  255 255 255; /* #FFFFFF */
-    --color-elevated: 241 242 248; /* #F1F2F8 */
-    --color-dim:      223 226 236; /* #DFE2EC */
-    --color-ink:      18 21 31;    /* #12151F */
-    --color-muted:    91 100 120;  /* #5B6478 */
-    /* Same hairline technique, flipped to a dark-based overlay so borders/
-       hover washes stay visible instead of vanishing on a light surface. */
-    --color-hairline: 15 18 26;
-    /* Darker steps of the same indigo scale so text stays >=5:1 on a light
-       bg instead of the washed-out lavender used on dark (1.5-2.8:1). */
-    --color-indigo-200: 70 41 160;   /* #4629A0 (indigo-800) */
-    --color-indigo-300: 106 69 240;  /* #6A45F0 (indigo-600) */
-    --color-indigo-400: 89 53 201;   /* #5935C9 (indigo-700) */
-    /* Darker steps of each status scale so warning/healthy/info/error text
-       clears ~4.5-6:1 on a light bg instead of ~1.4-2.6:1 on stock pastels. */
-    --color-amber-300:   180 83 9;   /* #B45309 (amber-700) */
-    --color-amber-400:   180 83 9;   /* #B45309 (amber-700) */
-    --color-emerald-300: 4 120 87;   /* #047857 (emerald-700) */
-    --color-emerald-400: 4 120 87;   /* #047857 (emerald-700) */
-    --color-sky-300:     3 105 161;  /* #0369A1 (sky-700) */
-    --color-sky-400:     3 105 161;  /* #0369A1 (sky-700) */
-    --color-red-300:     185 28 28;  /* #B91C1C (red-700) */
-    --color-red-400:     185 28 28;  /* #B91C1C (red-700) */
-    --color-red-500:     185 28 28;  /* #B91C1C (red-700) */
-    color-scheme: light;
-  }
-
   body {
     background-color: rgb(var(--color-base));
     color: rgb(var(--color-ink));
@@ -91,6 +61,17 @@
   .btn-primary:hover {
     opacity: 0.9;
   }
+
+  /* Scroll-snap carousels (home page component showcase): native scrollbar
+     would fight the arrow-button UI, so hide it — scrolling/swiping still
+     works, it just isn't drawn. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes flow-edge {
@@ -113,13 +94,14 @@
               inset 0 1px 24px rgba(0, 0, 0, 0.45);
 }
 
-.light .canvas-surface {
-  background:
-    radial-gradient(1400px 820px at 50% 28%, rgba(124, 92, 255, 0.07) 0%, transparent 60%),
-    radial-gradient(1000px 760px at 82% 78%, rgba(139, 92, 246, 0.05) 0%, transparent 62%),
-    linear-gradient(180deg, #f2f1fb 0%, #f7f8fc 100%);
-  box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.10),
-              inset 0 1px 16px rgba(20, 20, 40, 0.06);
+/* Hover cue for flip cards — signals "flippable" without an icon. */
+@keyframes card-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-2deg); }
+  75%      { transform: rotate(2deg); }
+}
+.hover-shake:hover {
+  animation: card-shake 0.35s ease-in-out;
 }
 
 .edge-flow {
@@ -149,24 +131,6 @@
 }
 .react-flow__controls-button:hover svg {
   fill: #ededf2;
-}
-
-.light .react-flow__controls {
-  background: #ffffff;
-  border: 1px solid #e2e5ee;
-}
-.light .react-flow__controls-button {
-  background: #ffffff;
-  border-bottom: 1px solid #e2e5ee;
-}
-.light .react-flow__controls-button svg {
-  fill: #6b7386;
-}
-.light .react-flow__controls-button:hover {
-  background: #f1f2f8;
-}
-.light .react-flow__controls-button:hover svg {
-  fill: #12151f;
 }
 
 .react-flow__handle {
@@ -199,6 +163,7 @@
   .animate-fade-up,
   .animate-logo-pulse,
   .edge-flow,
+  .hover-shake,
   [class*="card-breathe"] {
     animation: none !important;
     opacity: 1 !important;

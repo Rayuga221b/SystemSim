@@ -6,52 +6,49 @@ Product (design serves the tool; clarity over decoration).
 
 ## Theme
 
-Dark technical is the default/primary identity — the scene: an engineer in a
+Dark technical is the app's only identity — the scene: an engineer in a
 focused study session. Not a marketing page — a real tool. Borrowed cues from
-Linear and Figma. Light mode is a full, supported second theme (see "Light /
-dark mode" under Decisions) — dark is just what a fresh session opens to.
+Linear and Figma. There is no light theme (see "Light theme removed" under
+Decisions).
 
 ## Color tokens
 
 All six are CSS variables (`--color-*` in `index.css`, RGB triplets), not
 static hex — `tailwind.config.js` maps them through
 `rgb(var(--color-x) / <alpha-value>)` so opacity modifiers (`bg-surface/50`)
-keep working. `:root` holds the dark values (below); `:root.light` overrides
-all of them at once. next-themes toggles the `.light` class on `<html>`.
+keep working. `:root` holds the (only) values below. Kept as CSS variables
+rather than inlined hex even post-light-theme-removal — see "Light theme
+removed" under Decisions.
 
-| Token      | Dark value | Light value | Usage                                      |
-|------------|-----------|-------------|---------------------------------------------|
-| `base`     | `#0B0E14`  | `#F8F9FC`  | Page background                            |
-| `surface`  | `#12161F`  | `#FFFFFF`  | Card / panel backgrounds                   |
-| `elevated` | `#1A2030`  | `#F1F2F8`  | Raised surfaces, hover backgrounds         |
-| `dim`      | `#262E42`  | `#DFE2EC`  | Borders, dividers                          |
-| `ink`      | `#F3F5FA`  | `#12151F`  | Primary text (high contrast)               |
-| `muted`    | `#8D97B0`  | `#5B6478`  | Secondary text (≥4.5:1 on base/surface)    |
+| Token      | Value      | Usage                                       |
+|------------|-----------|----------------------------------------------|
+| `base`     | `#0B0E14`  | Page background                             |
+| `surface`  | `#12161F`  | Card / panel backgrounds                    |
+| `elevated` | `#1A2030`  | Raised surfaces, hover backgrounds          |
+| `dim`      | `#262E42`  | Borders, dividers                           |
+| `ink`      | `#F3F5FA`  | Primary text (high contrast)                |
+| `muted`    | `#8D97B0`  | Secondary text (≥4.5:1 on base/surface)     |
 
-`hairline` (also CSS-var-backed: white in dark mode, `#0F121A`-ish in light)
-replaces the old habit of hand-rolling a hairline border/hover wash with
-`white/[alpha]` directly on an element — that only worked because the page
-was assumed to always be dark. Use `border-hairline/[0.06]`,
-`hover:bg-hairline/[0.05]`, etc.; never reach for bare `white/[alpha]` for
-chrome again (it's still correct for things like `SplashLoader`, which is
-intentionally dark in both themes — see Decisions).
+`hairline` (also CSS-var-backed, white) replaces the old habit of
+hand-rolling a hairline border/hover wash with `white/[alpha]` directly on
+an element. Use `border-hairline/[0.06]`, `hover:bg-hairline/[0.05]`, etc.;
+never reach for bare `white/[alpha]` for chrome again (it's still correct
+for things like `SplashLoader` — see Decisions).
 
 Brand accent: `indigo-500` (#7C5CFF — violet; the Tailwind `indigo` scale is
 fully overridden in `tailwind.config.js`, so every existing `indigo-*` class
 repaints without renaming). Used for interactive elements, current state
 indicators, and primary actions only — not decoration. Steps `200`/`300`/`400`
-of that scale (and the equivalent light steps of `amber`/`emerald`/`sky`/`red`
-— `300`/`400`, plus `red-500`) are ALSO CSS-var-backed, because those are the
-steps used as text/link color: fine light-on-dark, but the same lightness is
-1.4–2.8:1 on a light bg. Light mode swaps them for darker steps of the same
-scale (5–9:1). Everything else in each scale (50/100/500/600/700/800/900/950)
-stays a static hex — only the shades actually used as text needed the swap.
+of that scale (and the equivalent steps of `amber`/`emerald`/`sky`/`red` —
+`300`/`400`, plus `red-500`) are ALSO CSS-var-backed, because those are the
+steps used as text/link color. Everything else in each scale
+(50/100/500/600/700/800/900/950) stays a static hex.
 
 Second accent: `mint` (#34E2A1). Reserved strictly for "healthy" /
 "simulating" states (sandbox node status, results panel). Never decorative —
 if it's on screen, something is actually good or actively running.
 
-Warning / bottleneck: `amber-400` (#FBBF24 dark / `#B45309` light). Semantic only.
+Warning / bottleneck: `amber-400` (#FBBF24). Semantic only.
 
 No third gradient accent. Cyan (#06B6D4) is retired from the palette.
 
@@ -264,3 +261,19 @@ infrastructure.
   `enableSystem={false}` — a first-time visitor sees dark; light is an
   explicit opt-in via the toggle, not a silent repaint when the OS theme
   changes underneath the user.
+
+**Light theme removed — DECISION (2026-07-26, Satyam's call — supersedes
+"Light / dark mode" above):** dropped light mode and the toggle; dark
+technical is now the app's only theme. WHY: light mode was extra surface
+area (a second value for every token, a contrast pass on every new
+component) for a tool whose primary identity was always dark technical —
+not worth maintaining as a second first-class theme. Removed:
+`components/ui/ThemeToggle.jsx` and its two Navbar mountings, the
+`next-themes` dependency and `ThemeProvider` wrapper in `main.jsx`, the
+`:root.light` variable block and `.light`-scoped canvas/React Flow
+overrides in `index.css`, and the `theme`-branching in `DottedSurface`
+(now hardcoded to the dark fog/particle colors). The CSS-variable
+mechanism itself stayed — `base/surface/elevated/dim/ink/muted/hairline`
+and the status-color text steps are still tokens in `:root`, just with a
+single value each now instead of a dark/light pair. `docs/spec.md` and any
+other references to a theme toggle are stale from this era.

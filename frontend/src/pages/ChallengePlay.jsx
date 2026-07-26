@@ -7,6 +7,7 @@ import { useReducedMotion } from "framer-motion";
 import {
   ArrowLeft, ClipboardList, Blocks, Lightbulb, Loader2, Send, Eye, Target,
   CheckCircle2, AlertTriangle, XCircle, MousePointerClick, BarChart3, RotateCcw, Trophy,
+  PanelLeftOpen, PanelLeftClose, X,
 } from "lucide-react";
 import { useStore } from "@/store";
 import { api } from "@/api/client";
@@ -27,6 +28,12 @@ export default function ChallengePlay() {
   const [challenge, setChallenge] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [leftTab, setLeftTab] = useState("brief"); // brief | build
+  // Below `lg` the brief/build rail and the inspect/results rail are fixed
+  // drawers (see Sandbox.jsx for the same pattern) — leftPanelOpen starts
+  // closed on mobile so the canvas is reachable without an extra tap.
+  const [leftPanelOpen, setLeftPanelOpen] = useState(
+    typeof window === "undefined" || window.innerWidth >= 1024
+  );
   const [hintsShown, setHintsShown] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [attempt, setAttempt] = useState(null); // {score, feedback}
@@ -46,6 +53,7 @@ export default function ChallengePlay() {
   const setReadPct = useStore((s) => s.setReadPct);
   const setSaveModalOpen = useStore((s) => s.setSaveModalOpen);
 
+  const selectNode = useStore((s) => s.selectNode);
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
   const [rightTab, setRightTab] = useState("inspect");
   useEffect(() => { if (simResult) setRightTab("results"); }, [simResult]);
@@ -124,16 +132,34 @@ export default function ChallengePlay() {
 
   return (
     <ReactFlowProvider>
-      <div className="h-[calc(100vh-3.5rem)] flex bg-base overflow-hidden">
-        {/* Left: brief / build */}
-        <aside className="w-[280px] shrink-0 h-full border-r border-hairline/[0.06] bg-surface/95 flex flex-col">
-          <div className="flex border-b border-hairline/[0.06]" role="tablist">
+      <div className="h-[calc(100vh-3.5rem)] flex bg-base overflow-hidden relative lg:static">
+        {/* Left: brief / build — fixed drawer below `lg` */}
+        {leftPanelOpen && (
+          <div
+            className="fixed inset-0 top-14 z-20 bg-black/50 lg:hidden"
+            onClick={() => setLeftPanelOpen(false)}
+            aria-hidden
+          />
+        )}
+        <aside className={`fixed top-14 bottom-0 left-0 z-30 w-[85%] max-w-[280px] lg:static lg:z-auto lg:w-[280px]
+                           shrink-0 h-[calc(100%-3.5rem)] lg:h-full border-r border-hairline/[0.06] bg-surface
+                           shadow-2xl shadow-black/40 lg:shadow-none flex flex-col transition-transform duration-200
+                           ${leftPanelOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+          <div className="flex items-center border-b border-hairline/[0.06]" role="tablist">
             <LeftTab active={leftTab === "brief"} onClick={() => setLeftTab("brief")}>
               <ClipboardList size={12} aria-hidden /> Brief
             </LeftTab>
             <LeftTab active={leftTab === "build"} onClick={() => setLeftTab("build")}>
               <Blocks size={12} aria-hidden /> Components
             </LeftTab>
+            <button
+              type="button"
+              onClick={() => setLeftPanelOpen(false)}
+              className="lg:hidden shrink-0 p-2 mx-1 rounded-lg text-muted hover:text-ink hover:bg-hairline/[0.06] transition-colors"
+              aria-label="Close panel"
+            >
+              <X size={14} />
+            </button>
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto">
@@ -274,6 +300,15 @@ export default function ChallengePlay() {
 
         {/* Canvas */}
         <div className="relative flex-1 min-w-0">
+          <button
+            type="button"
+            onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+            className="lg:hidden absolute top-3 left-3 z-10 p-2 rounded-lg bg-surface/90 backdrop-blur border border-hairline/[0.08] text-muted hover:text-ink transition-colors"
+            aria-label={leftPanelOpen ? "Hide brief and components" : "Show brief and components"}
+          >
+            {leftPanelOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+          </button>
+
           <SimBar onSave={() => setSaveModalOpen(true)} />
           {simError && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 max-w-md text-center bg-red-500/10 border border-red-500/30 text-red-300 text-[12.5px] rounded-lg px-4 py-2">
@@ -290,25 +325,42 @@ export default function ChallengePlay() {
           <CanvasArea />
         </div>
 
-        {/* Right: inspect / results */}
+        {/* Right: inspect / results — fixed drawer below `lg` */}
         {(selectedNode || simResult) && (
-          <aside className="w-[300px] shrink-0 h-full border-l border-hairline/[0.06] bg-surface/95 flex flex-col">
-            <div className="flex border-b border-hairline/[0.06]" role="tablist">
-              <LeftTab active={rightTab === "inspect"} onClick={() => setRightTab("inspect")} disabled={!selectedNode}>
-                <MousePointerClick size={12} aria-hidden /> Inspect
-              </LeftTab>
-              <LeftTab active={rightTab === "results"} onClick={() => setRightTab("results")} disabled={!simResult}>
-                <BarChart3 size={12} aria-hidden /> Results
-              </LeftTab>
-            </div>
-            <div className="flex-1 min-h-0">
-              {rightTab === "inspect" && selectedNode && <PropertiesPanel node={selectedNode} />}
-              {rightTab === "inspect" && !selectedNode && (
-                <p className="px-4 py-6 text-[12px] text-muted">Select a node to configure it.</p>
-              )}
-              {rightTab === "results" && <ResultsPanel />}
-            </div>
-          </aside>
+          <>
+            <div
+              className="fixed inset-0 top-14 z-20 bg-black/50 lg:hidden"
+              onClick={() => { selectNode(null); clearSimResult(); }}
+              aria-hidden
+            />
+            <aside className="fixed top-14 bottom-0 right-0 z-30 w-[85%] max-w-[300px] lg:static lg:z-auto
+                               shrink-0 h-[calc(100%-3.5rem)] lg:h-full border-l border-hairline/[0.06] bg-surface
+                               shadow-2xl shadow-black/40 lg:shadow-none flex flex-col">
+              <div className="flex items-center border-b border-hairline/[0.06]" role="tablist">
+                <LeftTab active={rightTab === "inspect"} onClick={() => setRightTab("inspect")} disabled={!selectedNode}>
+                  <MousePointerClick size={12} aria-hidden /> Inspect
+                </LeftTab>
+                <LeftTab active={rightTab === "results"} onClick={() => setRightTab("results")} disabled={!simResult}>
+                  <BarChart3 size={12} aria-hidden /> Results
+                </LeftTab>
+                <button
+                  type="button"
+                  onClick={() => { selectNode(null); clearSimResult(); }}
+                  className="lg:hidden shrink-0 p-2 mx-1 rounded-lg text-muted hover:text-ink hover:bg-hairline/[0.06] transition-colors"
+                  aria-label="Close panel"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0">
+                {rightTab === "inspect" && selectedNode && <PropertiesPanel node={selectedNode} />}
+                {rightTab === "inspect" && !selectedNode && (
+                  <p className="px-4 py-6 text-[12px] text-muted">Select a node to configure it.</p>
+                )}
+                {rightTab === "results" && <ResultsPanel />}
+              </div>
+            </aside>
+          </>
         )}
 
         <LearnDrawer />
