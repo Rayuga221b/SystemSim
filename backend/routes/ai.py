@@ -3,8 +3,8 @@
 Both endpoints ALWAYS include concrete context (graph state or case-study
 text) in the prompt. No open-ended chat. 503 when no API key is configured.
 
-Providers are split on purpose (see CLAUDE.md Decisions, 2026-07-25):
-/ai/explain runs on Gemini (services/ai_explain.py — the key we have),
+Providers are split on purpose (see CLAUDE.md Decisions, 2026-07-26):
+/ai/explain runs on Groq (services/ai_explain.py — the key with quota),
 /ai/mentor stays on Claude (services/claude.py). Each raises its own
 AIUnavailable; the route maps both to the same 503 contract.
 """
@@ -17,7 +17,7 @@ from services import ai_explain
 from services.claude import AIUnavailable as ClaudeUnavailable
 from services.claude import case_study_mentor
 from services.content import get_case_study
-from services.gemini import AIUnavailable as GeminiUnavailable
+from services.groq import AIUnavailable as GroqUnavailable
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -36,7 +36,7 @@ class MentorRequest(BaseModel):
 def explain(req: ExplainRequest):
     try:
         return ai_explain.explain_simulation(req.graph, req.result)
-    except GeminiUnavailable as e:
+    except GroqUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e))
 
 

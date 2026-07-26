@@ -27,10 +27,12 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   JWT). Local via docker-compose; AWS later. (Swapped from Supabase — see
   "Auth swap" note under Decisions.)
 - AI: split by feature — the **simulation explainer** and roadmap ingest run
-  on **Gemini** (`GEMINI_MODEL`, default `gemini-3.5-flash`, isolated provider
-  `services/gemini.py`); the **case-study mentor** stays on Claude API — model
-  `claude-sonnet-4-20250514` (see NOTE under Decisions). See "Ingest uses
-  Gemini" and "Explainer on Gemini" under Decisions, and
+  on **Groq** (isolated provider `services/groq.py`; explainer =
+  `GROQ_MODEL`, default `llama-3.3-70b-versatile`; ingest =
+  `GROQ_INGEST_MODEL`, default `qwen/qwen3.6-27b`); the **case-study mentor**
+  stays on Claude API — model `claude-sonnet-4-20250514` (see NOTE under
+  Decisions). `services/gemini.py` is kept for swap-back but unused by
+  default. See "Explainer + ingest on Groq" under Decisions, and
   `docs/AI_INTEGRATION.md` for the full architecture.
 - Content rendering: `react-markdown` + `remark-gfm` + `rehype-highlight`
   (roadmap lessons), `mermaid` (flowcharts). Long-form only; UI stays on Prose.
@@ -80,6 +82,19 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   suggested fixes) via Gemini `responseSchema`. The case-study mentor stays on
   Claude (`services/claude.py`) — provider isolation means swapping either
   back is a one-import change. Full write-up: `docs/AI_INTEGRATION.md`.
+- **Explainer + ingest on Groq.** DECISION (2026-07-26, Satyam's call —
+  supersedes both Gemini notes above): the simulation explainer
+  (`POST /ai/explain`) runs on Groq `llama-3.3-70b-versatile` and the roadmap
+  ingest on Groq `qwen/qwen3.6-27b`, via a new isolated provider
+  `services/groq.py` (OpenAI-compatible REST, no SDK, `GROQ_API_KEY` +
+  `GROQ_MODEL`/`GROQ_INGEST_MODEL` env). WHY: the Groq key is the one with
+  usable quota. Groq specifics baked into the provider: explicit User-Agent
+  (Cloudflare 403s urllib's default), `retry-after`-aware 429 backoff, JSON
+  *object* mode with the schema injected into the prompt (schema-enforced
+  mode is GPT-OSS-only), `reasoning_effort: "none"` for qwen, and the ingest
+  budgets `prompt + max_completion_tokens` under the 8k/min free-tier cap
+  (413 is checked at request time and never retryable). Mentor stays on
+  Claude; `services/gemini.py` kept for swap-back.
 - **Diagrams are our own assets, never the source's.** Flowcharts render via
   **Mermaid** (```mermaid blocks → themed SVG, `components/ui/Mermaid.jsx`);
   static figures are hand-authored SVGs in `backend/static/roadmap/diagrams/`

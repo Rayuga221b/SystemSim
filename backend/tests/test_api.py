@@ -157,13 +157,13 @@ def test_case_studies_list_and_detail(client):
 
 
 # --------------------------------------------------------------------- ai
-# The explainer runs on Gemini (services/ai_explain.py), the mentor on Claude.
+# The explainer runs on Groq (services/ai_explain.py), the mentor on Claude.
 # Tests never touch either provider: keys are stripped via monkeypatch (503
-# path) and the Gemini call is mocked (success path) — robust regardless of
+# path) and the Groq call is mocked (success path) — robust regardless of
 # what .env contains.
 
-def test_ai_explain_returns_503_without_gemini_key(client, monkeypatch):
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+def test_ai_explain_returns_503_without_groq_key(client, monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     r = client.post("/ai/explain", json={"graph": SIMPLE_GRAPH, "result": {}})
     assert r.status_code == 503
 

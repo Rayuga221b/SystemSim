@@ -1,17 +1,18 @@
-"""AI simulation explainer — runs on the Gemini provider.
+"""AI simulation explainer — runs on the Groq provider.
 
-DECISION (2026-07-25): the explainer runs on Gemini (services/gemini.py), not
-Claude — that's the key we actually have. The Claude client stays untouched for
-the mentor feature; swapping the explainer back is a one-import change here.
+DECISION (2026-07-26): the explainer runs on Groq `llama-3.3-70b-versatile`
+(services/groq.py) — the key with usable quota — superseding the 2026-07-25
+Gemini decision. The Claude client stays untouched for the mentor feature;
+swapping the explainer to any provider remains a one-import change here.
 
 Context-scoped by design (project rule): every prompt carries the concrete
 graph + simulation result — never open-ended chat. The graph is serialized to
 a compact line-per-node text form (not raw JSON) to keep token cost small and
-predictable, and the response uses Gemini controlled generation
-(response_schema) so the answer is guaranteed-parseable structured JSON the
-frontend renders directly: summary, per-bottleneck WHY + fix, suggested fixes.
+predictable, and the response uses Groq JSON mode (+ the schema injected into
+the prompt) so the answer is parseable structured JSON the frontend renders
+directly: summary, per-bottleneck WHY + fix, suggested fixes.
 
-No GEMINI_API_KEY -> AIUnavailable -> the route's 503 -> the frontend's
+No GROQ_API_KEY -> AIUnavailable -> the route's 503 -> the frontend's
 friendly "not configured" note. Same graceful-degradation contract as Claude.
 """
 from __future__ import annotations
@@ -19,11 +20,12 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from services.gemini import AIUnavailable, generate_json
+from services.groq import AIUnavailable, generate_json
 
-# Controlled-generation schema — guarantees valid JSON back (same technique as
-# the roadmap ingest). propertyOrdering makes the model write the summary
-# first, so it commits to a verdict before arguing the details.
+# Response schema — steers the model's JSON shape (Groq JSON mode guarantees
+# syntax; _validate below stays the shape backstop). propertyOrdering makes
+# the model write the summary first, so it commits to a verdict before
+# arguing the details.
 _SCHEMA = {
     "type": "object",
     "properties": {
@@ -68,10 +70,8 @@ _SYSTEM = (
     "hedging, no restating raw numbers the user already sees."
 )
 
-# Generous ceiling: on Gemini 2.5+/3.5 the model's internal "thinking" tokens
-# count against maxOutputTokens — 1024 truncated real responses mid-JSON.
-# The visible JSON stays small (the schema + prompt keep it tight); this cap
-# only guards against runaway cost.
+# Generous ceiling: the visible JSON stays small (the schema + prompt keep it
+# tight); this cap only guards against runaway cost.
 _MAX_TOKENS = 4096
 
 
@@ -117,7 +117,7 @@ def _validate(data: Any) -> dict[str, Any]:
     """Shape-check the model output; anything off-contract -> AIUnavailable
     (the route's 503) rather than half-rendered garbage in the UI."""
     if not isinstance(data, dict) or not isinstance(data.get("summary"), str):
-        raise AIUnavailable("Gemini returned an unexpected explanation shape.")
+        raise AIUnavailable("Model returned an unexpected explanation shape.")
     bottlenecks = []
     for b in data.get("bottlenecks") or []:
         if isinstance(b, dict) and all(isinstance(b.get(k), str) for k in ("why", "fix")):
@@ -142,5 +142,5 @@ def explain_simulation(graph: dict[str, Any], result: dict[str, Any]) -> dict[st
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
-        raise AIUnavailable(f"Gemini returned unparseable JSON: {text[:200]}") from e
+        raise AIUnavailable(f"Model returned unparseable JSON: {text[:200]}") from e
     return _validate(data)
