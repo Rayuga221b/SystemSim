@@ -19,6 +19,7 @@ export default function Sandbox() {
   const location = useLocation();
   const nodes = useStore((s) => s.nodes);
   const selectedNodeId = useStore((s) => s.selectedNodeId);
+  const selectNode = useStore((s) => s.selectNode);
   const simResult = useStore((s) => s.simResult);
   const simError = useStore((s) => s.simError);
   const loadGraph = useStore((s) => s.loadGraph);
@@ -49,6 +50,14 @@ export default function Sandbox() {
   useEffect(() => { if (simResult) setTab("results"); }, [simResult]);
   useEffect(() => { if (selectedNodeId) setTab("inspect"); }, [selectedNodeId]);
 
+  // On mobile the palette is a fixed drawer covering the canvas (see
+  // Palette.jsx) — start closed there so the canvas is reachable immediately,
+  // same first-load behavior as ChallengePlay's brief/build rail.
+  useEffect(() => {
+    if (window.innerWidth < 1024) setPaletteOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Arriving from a case study / dashboard with a graph to load.
   useEffect(() => {
     const incoming = location.state;
@@ -65,8 +74,17 @@ export default function Sandbox() {
 
   return (
     <ReactFlowProvider>
-      <div className="h-[calc(100vh-3.5rem)] flex bg-base overflow-hidden">
-        {paletteOpen && <Palette />}
+      <div className="h-[calc(100vh-3.5rem)] flex bg-base overflow-hidden relative lg:static">
+        {paletteOpen && (
+          <>
+            <div
+              className="fixed inset-0 top-14 z-20 bg-black/50 lg:hidden"
+              onClick={() => setPaletteOpen(false)}
+              aria-hidden
+            />
+            <Palette onClose={() => setPaletteOpen(false)} />
+          </>
+        )}
 
         {/* Canvas */}
         <div className="relative flex-1 min-w-0">
@@ -166,25 +184,43 @@ export default function Sandbox() {
           <CanvasArea />
         </div>
 
-        {/* Inspector / results */}
+        {/* Inspector / results — fixed drawer below `lg`, since a phone-width
+            viewport has no spare room for a third column next to the canvas. */}
         {showPanel && (
-          <aside className="w-[300px] shrink-0 h-full border-l border-hairline/[0.06] bg-surface/95 flex flex-col">
-            <div className="flex border-b border-hairline/[0.06]" role="tablist">
-              <TabButton active={tab === "inspect"} onClick={() => setTab("inspect")} disabled={!selectedNode}>
-                <MousePointerClick size={12} aria-hidden /> Inspect
-              </TabButton>
-              <TabButton active={tab === "results"} onClick={() => setTab("results")} disabled={!simResult}>
-                <BarChart3 size={12} aria-hidden /> Results
-              </TabButton>
-            </div>
-            <div className="flex-1 min-h-0">
-              {tab === "inspect" && selectedNode && <PropertiesPanel node={selectedNode} />}
-              {tab === "inspect" && !selectedNode && (
-                <p className="px-4 py-6 text-[12px] text-muted">Select a node to configure it.</p>
-              )}
-              {tab === "results" && <ResultsPanel />}
-            </div>
-          </aside>
+          <>
+            <div
+              className="fixed inset-0 top-14 z-20 bg-black/50 lg:hidden"
+              onClick={() => { selectNode(null); clearSimResult(); }}
+              aria-hidden
+            />
+            <aside className="fixed top-14 bottom-0 right-0 z-30 w-[85%] max-w-[300px] lg:static lg:z-auto
+                               shrink-0 h-[calc(100%-3.5rem)] lg:h-full border-l border-hairline/[0.06] bg-surface
+                               shadow-2xl shadow-black/40 lg:shadow-none flex flex-col">
+              <div className="flex items-center border-b border-hairline/[0.06]" role="tablist">
+                <TabButton active={tab === "inspect"} onClick={() => setTab("inspect")} disabled={!selectedNode}>
+                  <MousePointerClick size={12} aria-hidden /> Inspect
+                </TabButton>
+                <TabButton active={tab === "results"} onClick={() => setTab("results")} disabled={!simResult}>
+                  <BarChart3 size={12} aria-hidden /> Results
+                </TabButton>
+                <button
+                  type="button"
+                  onClick={() => { selectNode(null); clearSimResult(); }}
+                  className="lg:hidden shrink-0 p-2 mx-1 rounded-lg text-muted hover:text-ink hover:bg-hairline/[0.06] transition-colors"
+                  aria-label="Close panel"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0">
+                {tab === "inspect" && selectedNode && <PropertiesPanel node={selectedNode} />}
+                {tab === "inspect" && !selectedNode && (
+                  <p className="px-4 py-6 text-[12px] text-muted">Select a node to configure it.</p>
+                )}
+                {tab === "results" && <ResultsPanel />}
+              </div>
+            </aside>
+          </>
         )}
 
         <LearnDrawer />

@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { DottedSurface }    from "@/components/ui/dotted-surface";
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
-import ComponentCard      from "@/components/home/ComponentCard";
+import ComponentCarousel  from "@/components/home/ComponentCarousel";
+import WhoForCard         from "@/components/home/WhoForCard";
 import SimGraph           from "@/components/home/SimGraph";
 import LearnPathDiagram   from "@/components/home/LearnPathDiagram";
 
@@ -108,7 +108,8 @@ const COMPONENT_STRIP = [
   },
 ];
 
-// Who the tool is for — 4 use cases
+// Who the tool is for — 4 use cases. `to`/`cta` back each card with the page
+// that actually serves that purpose (see WhoForCard.jsx's flip-to-reveal).
 const WHO_FOR = [
   {
     icon: <Target size={16} />,
@@ -116,6 +117,8 @@ const WHO_FOR = [
     iconColor: "text-indigo-400",
     title: "Interview prep",
     desc: "Follow the interview-prep track — the 45-minute interview mapped, grading signals, common mistakes, and drills. Then get scored against reference architectures.",
+    to: "/learn/interview",
+    cta: "Open interview prep",
   },
   {
     icon: <Route size={16} />,
@@ -123,6 +126,8 @@ const WHO_FOR = [
     iconColor: "text-amber-400",
     title: "Self-study roadmap",
     desc: "Work the 76-lesson roadmap end to end — Foundations, Storage, Caching, Messaging, Consistency, Scaling — plus core-concept chapters, read like documentation.",
+    to: "/learn/roadmap",
+    cta: "Open the roadmap",
   },
   {
     icon: <BrainCircuit size={16} />,
@@ -130,6 +135,8 @@ const WHO_FOR = [
     iconColor: "text-emerald-400",
     title: "Hands-on practice",
     desc: "Turn theory into muscle memory. Drag, connect, and simulate on the sandbox, then take structured challenges to see exactly where bottlenecks form.",
+    to: "/sandbox",
+    cta: "Open the sandbox",
   },
   {
     icon: <AlertTriangle size={16} />,
@@ -137,6 +144,8 @@ const WHO_FOR = [
     iconColor: "text-rose-400",
     title: "Incident analysis",
     desc: "Walk through how Discord's storage collapsed, how Twitter's fanout failed, and how Netflix survives failures by causing them — then simulate it yourself.",
+    to: "/case-studies",
+    cta: "Browse case studies",
   },
 ];
 
@@ -378,9 +387,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Component showcase — left: Embla carousel | right: text + CTA ── */}
-      {/* Distinct bg (#0D0D1E) separates this from the bg-base sections above and below */}
-      {/* No overflow-hidden here — the arrow buttons sit outside the carousel track     */}
+      {/* ── Component showcase — top: text + CTA | below: paginated carousel ── */}
+      {/* Distinct bg (#0D0D1E) separates this from the bg-base sections above and below. */}
       <section className="py-12 sm:py-16 lg:py-20 relative overflow-hidden" style={{ background: "#0D0D1E" }}>
         {/* Subtle indigo glow from the top — visual bridge from the company carousel */}
         <div
@@ -390,70 +398,50 @@ export default function Home() {
             background: "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(124, 92, 255,0.07) 0%, transparent 70%)",
           }}
         />
-        {/* max-w-5xl gives the carousel room to breathe on large screens */}
-        <div className="relative max-w-5xl mx-auto px-6">
-          {/* 3:2 split — carousel gets 60% so cards have space to grow */}
-          <div className="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-8 lg:gap-16 items-center">
+        <div className="relative max-w-3xl mx-auto px-6 text-center flex flex-col items-center gap-5">
+          <h2 className="font-display font-semibold text-[1.625rem] sm:text-[1.75rem] md:text-[2rem] text-ink leading-[1.15] tracking-[-0.02em] text-balance">
+            14 components,<br className="sm:hidden" /> drag and drop
+          </h2>
+          <p className="text-muted text-sm leading-relaxed max-w-[40ch]">
+            Every building block for distributed systems, from ingress to async. Wire them up on the canvas and simulate load in real time.
+          </p>
+          <Link
+            to="/sandbox"
+            className="inline-flex items-center gap-2 btn-primary text-white text-sm font-semibold px-6 py-3 rounded-xl"
+          >
+            Open Sandbox <ArrowRight size={14} />
+          </Link>
+        </div>
 
-            {/* Left: Embla carousel — 2 cards on mobile, 3 on sm+ */}
-            <div className="px-10"> {/* side padding keeps arrow buttons visible */}
-              <Carousel opts={{ loop: true }} className="w-full">
-                <CarouselContent className="-ml-4 sm:-ml-5">
-                  {COMPONENT_STRIP.map((c, i) => (
-                    <CarouselItem key={i} className="pl-4 sm:pl-5 basis-1/2 sm:basis-1/3">
-                      <ComponentCard c={c} index={i} />
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-
-                <CarouselPrevious
-                  className="border-hairline/10 bg-elevated text-muted hover:bg-indigo-500/10 hover:border-indigo-500/30 hover:text-indigo-400 transition-colors duration-150"
-                />
-                <CarouselNext
-                  className="border-hairline/10 bg-elevated text-muted hover:bg-indigo-500/10 hover:border-indigo-500/30 hover:text-indigo-400 transition-colors duration-150"
-                />
-              </Carousel>
-            </div>
-
-            {/* Right: heading, description, CTA */}
-            <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-5 px-2 sm:px-0">
-              <h2
-                className="font-display font-semibold text-[1.625rem] sm:text-[1.75rem] md:text-[2rem] text-ink leading-[1.15] tracking-[-0.02em] text-balance"
-              >
-                14 components,<br />drag and drop
-              </h2>
-              <p className="text-muted text-sm leading-relaxed max-w-[34ch]">
-                Every building block for distributed systems, from ingress to async. Wire them up on the canvas and simulate load in real time.
-              </p>
-              <Link
-                to="/sandbox"
-                className="inline-flex items-center gap-2 btn-primary text-white text-sm font-semibold px-6 py-3 rounded-xl"
-              >
-                Open Sandbox <ArrowRight size={14} />
-              </Link>
-            </div>
-
-          </div>
+        {/* 3 per page on mobile, 6 on desktop — swipe or use the arrows. */}
+        <div className="relative max-w-3xl mx-auto mt-10 sm:mt-12 px-6">
+          <ComponentCarousel items={COMPONENT_STRIP} />
         </div>
       </section>
 
       {/* ── Who is this for — 2×2 grid ── */}
-      <section className="bg-base border-t border-hairline/[0.05] py-16">
-        <div className="max-w-4xl mx-auto px-6">
+      <section className="relative bg-base border-t border-hairline/[0.05] py-16 overflow-hidden">
+        {/* Purple glow — two layered radials (a broad dim wash + a brighter
+            core over the heading) so the section reads as visibly tinted
+            rather than a barely-there hint, same accent used across the
+            rest of the page. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: [
+              "radial-gradient(ellipse 55% 65% at 50% 0%, rgba(124, 92, 255,0.28) 0%, transparent 65%)",
+              "radial-gradient(ellipse 90% 80% at 50% 10%, rgba(124, 92, 255,0.14) 0%, transparent 75%)",
+            ].join(", "),
+          }}
+        />
+        <div className="relative max-w-4xl mx-auto px-6">
           <h2 className="font-display font-semibold text-[1.25rem] text-ink mb-2">Who uses SystemSim</h2>
-          <p className="text-muted text-sm mb-10">Built for engineers who learn by doing, not by reading.</p>
+          <p className="text-muted text-sm mb-2">Built for engineers who learn by doing, not by reading.</p>
+          <p className="text-muted/60 text-[11px] mb-8">Click a card to flip it and jump to that page.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {WHO_FOR.map((item) => (
-              <div
-                key={item.title}
-                className="bg-elevated border border-hairline/[0.07] rounded-xl p-5 hover:border-indigo-500/20 transition-colors duration-150"
-              >
-                <span className={`${item.iconBg} ${item.iconColor} w-8 h-8 rounded-lg flex items-center justify-center mb-4`}>
-                  {item.icon}
-                </span>
-                <h3 className="font-semibold text-ink text-sm mb-2">{item.title}</h3>
-                <p className="text-muted text-xs leading-relaxed">{item.desc}</p>
-              </div>
+              <WhoForCard key={item.title} item={item} />
             ))}
           </div>
         </div>

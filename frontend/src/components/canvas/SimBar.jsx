@@ -59,10 +59,10 @@ export default function SimBar({ onSave }) {
   }, [examplesOpen, helpOpen]);
 
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 flex-wrap justify-center
-                    max-w-[calc(100%-5.5rem)] bg-surface/90 backdrop-blur border border-hairline/[0.08] rounded-xl pl-4 pr-2 py-2 shadow-lg shadow-black/30">
+    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 sm:gap-3 flex-wrap justify-center
+                    max-w-[calc(100%-1.5rem)] sm:max-w-[calc(100%-5.5rem)] bg-surface/90 backdrop-blur border border-hairline/[0.08] rounded-xl pl-3 sm:pl-4 pr-2 py-2 shadow-lg shadow-black/30">
       {/* Load */}
-      <label className="flex items-center gap-2.5">
+      <label className="flex items-center gap-2 sm:gap-2.5">
         <span className="font-mono text-[10px] uppercase tracking-wider text-muted whitespace-nowrap">Load</span>
         <input
           type="range"
@@ -71,7 +71,7 @@ export default function SimBar({ onSave }) {
           step={1}
           value={rpsToSlider(loadRps)}
           onChange={(e) => setLoadRps(sliderToRps(+e.target.value))}
-          className="w-36 accent-indigo-500"
+          className="w-20 sm:w-36 accent-indigo-500"
           aria-label="Load in requests per second"
         />
         <span className="font-mono text-[12px] text-ink w-[4.5rem] text-right tabular-nums">
@@ -91,7 +91,7 @@ export default function SimBar({ onSave }) {
           step={5}
           value={readPct}
           onChange={(e) => setReadPct(+e.target.value)}
-          className="w-20 accent-indigo-500"
+          className="w-14 sm:w-20 accent-indigo-500"
           aria-label="Read percentage of the workload"
         />
         <span className="font-mono text-[11px] text-muted w-[3.6rem] tabular-nums">{readPct}/{100 - readPct}</span>

@@ -4,7 +4,6 @@ import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useStore } from "@/store";
 import Logo from "@/components/ui/Logo";
-import ThemeToggle from "@/components/ui/ThemeToggle";
 
 // Learn sits before Sandbox (2026-07-16): the library is the entry point.
 // Interview prep moved under /learn/interview and is reached from the Learn
@@ -121,7 +120,6 @@ export default function Navbar() {
               </>
             )}
           </div>
-          <ThemeToggle />
           <button
             type="button"
             className="md:hidden p-2 rounded-lg text-muted hover:text-ink hover:bg-hairline/[0.06] transition-colors duration-150"
@@ -167,10 +165,6 @@ export default function Navbar() {
               ))}
             </nav>
             <div className="px-5 pb-5 pt-0 flex flex-col gap-2 border-t border-hairline/[0.04]">
-              <div className="flex items-center justify-between py-2.5">
-                <span className="font-display text-sm font-medium text-muted">Appearance</span>
-                <ThemeToggle />
-              </div>
               {user ? (
                 <Link
                   to="/dashboard"
