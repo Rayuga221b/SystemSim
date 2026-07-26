@@ -380,3 +380,66 @@ it, schema passed), and malformed-model-output → 503. Suite: 51 passed.
       urgent — explain calls burn free-tier Gemini quota)
 - [ ] Frontend mentor UI still pending an Anthropic key (mentor stays 503
       until then — graceful)
+
+---
+
+## 2026-07-26 — Groq provider: explainer -> llama-3.3-70b, ingest -> qwen3.6-27b
+
+DECISION (Satyam): both Gemini-backed features move to Groq — the key with
+usable quota. `/ai/explain` runs on `llama-3.3-70b-versatile`, the roadmap
+ingest on `qwen/qwen3.6-27b`. Mentor stays on Claude. `services/gemini.py`
+is untouched and unused — swap-back is a one-import change, as designed.
+
+### 1. New provider — `services/groq.py`
+
+OpenAI-compatible REST (`api.groq.com/openai/v1/chat/completions`) over
+urllib, no SDK — a deliberate mirror of `services/gemini.py` so
+`generate_json(system, user, *, model, max_tokens, response_schema)` is
+signature-identical and feature services swap with one import line. Model
+ids in ONE place: `GROQ_MODEL` / `GROQ_INGEST_MODEL` env vars.
+
+Groq specifics learned the hard way (each observed live):
+
+- **Cloudflare 403 (error 1010)** on urllib's default `Python-urllib/x.y`
+  User-Agent — provider sends an explicit UA.
+- **JSON mode, not schema enforcement:** Groq's schema-enforced structured
+  outputs only cover GPT-OSS models; llama/qwen get
+  `response_format: {"type": "json_object"}` (guarantees syntax) with the
+  schema injected into the system prompt (Gemini-only `propertyOrdering`
+  keys stripped). Caller validation stays the shape backstop — unchanged.
+- **429 carries `retry-after` seconds** — honored (capped at 120s),
+  exponential backoff otherwise; also retries 500/502/503.
+- **qwen is a reasoning model:** thinking burned the whole completion budget
+  and Groq's JSON-mode validation failed on the truncated result
+  (`json_validate_failed`, empty generation). Fix: `reasoning_effort:
+  "none"` on ingest calls; provider also strips any `<think>` prefix.
+
+### 2. Ingest token budgeting — `services/roadmap_ingest.py`
+
+Free-tier qwen caps at **8k tokens/min, checked at request time against
+`prompt + max_completion_tokens`** — the old 16k output budget alone drew an
+HTTP 413 (never retryable, unlike 429). `transform()` now budgets both
+sides: reference source truncated at a newline boundary when oversized (it's
+raw material for a rewrite, not the product) and the output cap sized to the
+remaining budget (conservative 3 chars/token estimate, 7600-token budget,
+2800-token output floor).
+
+### 3. Explainer + route + tests
+
+`services/ai_explain.py` imports from `services.groq` (schema, prompts,
+validation all unchanged — the seam held). `routes/ai.py` catches Groq's
+`AIUnavailable` for `/ai/explain`. Tests: only the 503 test changed
+(`GROQ_API_KEY` instead of `GEMINI_API_KEY`); the mocked success path passed
+untouched because it mocks at the feature-service seam. Suite: 51 passed.
+
+Live-verified: explainer returns grounded structured JSON on a 4-node
+bottleneck graph; ingest day 8 produced a 9.5k-char lesson with a mermaid
+diagram, published. Remaining 52 roadmap days batch-ingested via
+`python -m services.roadmap_ingest --days ... --publish` (self-paces under
+the per-minute cap via retry-after).
+
+### Open items
+
+- [ ] Rate limiting on `/ai/*` before public deploy (now burns Groq quota:
+      per-minute AND per-day caps)
+- [ ] Frontend mentor UI still pending an Anthropic key

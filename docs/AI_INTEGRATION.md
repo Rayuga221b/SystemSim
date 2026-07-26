@@ -3,23 +3,26 @@
 How SystemSim uses LLMs, and the WHY behind each decision. Written as
 interview-prep material: every section is a talking point you can defend.
 
-Current feature map (2026-07-25):
+Current feature map (2026-07-26):
 
 | Feature | Endpoint | Provider | Service |
 |---|---|---|---|
-| Simulation explainer | `POST /ai/explain` | **Gemini** (`gemini-3.5-flash`) | `services/ai_explain.py` → `services/gemini.py` |
+| Simulation explainer | `POST /ai/explain` | **Groq** (`llama-3.3-70b-versatile`) | `services/ai_explain.py` → `services/groq.py` |
 | Case-study mentor | `POST /ai/mentor` | Claude (`claude-sonnet-4-20250514`) | `services/claude.py` |
-| Roadmap lesson ingest | offline batch (`python -m services.roadmap_ingest`) | **Gemini** | `services/roadmap_ingest.py` → `services/gemini.py` |
+| Roadmap lesson ingest | offline batch (`python -m services.roadmap_ingest`) | **Groq** (`qwen/qwen3.6-27b`) | `services/roadmap_ingest.py` → `services/groq.py` |
+
+(`services/gemini.py` is kept intact for swap-back; nothing imports it by
+default anymore.)
 
 ---
 
-## 1. Provider isolation — why two providers, and why it doesn't hurt
+## 1. Provider isolation — why multiple providers, and why it doesn't hurt
 
 Each provider is one self-contained module: `services/claude.py` (Anthropic
-SDK) and `services/gemini.py` (raw REST over `urllib`, no SDK dependency).
-Nothing else in the codebase knows which vendor is behind a feature — routes
-import a *feature service* (`ai_explain`, `claude.case_study_mentor`), never a
-vendor client.
+SDK), `services/gemini.py` and `services/groq.py` (raw REST over `urllib`,
+no SDK dependency). Nothing else in the codebase knows which vendor is behind
+a feature — routes import a *feature service* (`ai_explain`,
+`claude.case_study_mentor`), never a vendor client.
 
 **History, because the WHY is the interview answer:**
 
@@ -31,6 +34,12 @@ vendor client.
   too — it was 503-ing behind a placeholder Anthropic key, and a working
   feature on the key you have beats a theoretical feature on the key you
   don't. The mentor stays on Claude, waiting on a real key.
+- 2026-07-26 (decision, Satyam): both Gemini features moved to **Groq**
+  (`services/groq.py`, OpenAI-compatible REST) — the Groq key is the one with
+  usable quota. The explainer runs on `llama-3.3-70b-versatile`, the ingest
+  on `qwen/qwen3.6-27b`. The swap was exactly what the seam promised: one
+  import in `ai_explain.py` / `roadmap_ingest.py` plus the route's exception
+  mapping; the tests passed unchanged.
 
 **The point to make:** provider choice is a *deployment detail*, not an
 architecture decision — because the seam is at the feature-service level.
@@ -41,6 +50,9 @@ knows or cares which vendor failed.
 
 ## 2. Where the model id lives — exactly one place per provider
 
+- Groq: `GROQ_MODEL` (explainer, default `llama-3.3-70b-versatile`) and
+  `GROQ_INGEST_MODEL` (ingest, default `qwen/qwen3.6-27b`), read once in
+  `services/groq.py`.
 - Gemini: `GEMINI_MODEL` env var, read once in `services/gemini.py`
   (default `gemini-2.5-flash` in code; `.env` pins `gemini-3.5-flash` because
   2.5 is blocked for new API projects).
@@ -82,9 +94,11 @@ red.
 
 ## 4. Response management — structured output end to end
 
-**Controlled generation, not prose parsing.** The explainer requests
-`responseMimeType: application/json` plus a `responseSchema`
-(Gemini controlled generation):
+**Structured output, not prose parsing.** The explainer requests Groq JSON
+mode (`response_format: {"type": "json_object"}` — guarantees syntactically
+valid JSON) and injects the response schema into the system prompt (Groq's
+schema-*enforced* structured outputs only cover its GPT-OSS models; on Gemini
+this same schema rode the native `responseSchema` controlled generation):
 
 ```json
 { "summary": "...",
@@ -94,36 +108,44 @@ red.
 
 WHY: the frontend renders sections and per-node cards (with "Show on canvas"
 deep-links via `node_id`) — impossible with a text blob, fragile with
-"please return JSON" prompting. The schema *guarantees* parseable, escaped
-JSON; the roadmap ingest proved this out first (its multi-line markdown field
-broke `json.loads` without it). `propertyOrdering` puts `summary` first so
-the model commits to a verdict before arguing details.
+"please return JSON" prompting. JSON mode guarantees the text parses; the
+schema steers the shape and `_validate()` stays the backstop. The roadmap
+ingest proved the need first (its multi-line markdown field broke
+`json.loads` under free-text prompting).
 
 **Validation after parsing.** Trust but verify: `_validate()` shape-checks
 the parsed output, drops malformed bottleneck entries, and caps fixes at 3.
 Off-contract output raises `AIUnavailable` → 503 → the UI's friendly
 fallback. WHY: a half-rendered AI panel is worse than an honest "unavailable".
 
-**Retry/backoff.** `gemini._post` retries 429/500/503 with exponential
-backoff (3s → 6s → 12s, 4 attempts). WHY 429 specifically: the free tier
-throttles hard (the roadmap ingest batch hit the *daily* quota mid-run —
-HTTP 429 is a normal operating condition here, not an anomaly). Terminal
-failures surface as `AIUnavailable`, never a raw stack trace.
+**Retry/backoff.** `groq._post` retries 429/500/502/503, honoring Groq's
+`retry-after` header on 429 (falling back to exponential backoff). WHY 429
+specifically: the free tier throttles per minute AND per day — HTTP 429 is a
+normal operating condition here, not an anomaly. Groq also rejects
+oversized requests outright (HTTP 413: `prompt + max_completion_tokens`
+checked against the per-minute cap at request time — never retryable), so
+the ingest budgets both sides of every request. Terminal failures surface as
+`AIUnavailable`, never a raw stack trace.
 
 **Graceful degradation.** No key → `AIUnavailable` → HTTP 503 → the frontend
 shows "AI explanations aren't configured on this server yet" with a retry
 affordance. The product is fully usable with zero AI keys; AI is progressive
 enhancement, not a dependency.
 
-**Gotcha worth telling:** on Gemini 2.5+/3.5, internal "thinking" tokens
-count against `maxOutputTokens`. A 1024 cap truncated responses *mid-JSON*
-(observed live). The cap is 4096 now — the visible JSON stays small; the cap
-only bounds runaway cost.
+**Gotchas worth telling (observed live, one per provider):**
+- Gemini 2.5+/3.5: internal "thinking" tokens count against
+  `maxOutputTokens` — a 1024 cap truncated responses *mid-JSON*. Cap is 4096.
+- Groq: Cloudflare fronts `api.groq.com` and 403s urllib's default
+  `Python-urllib/x.y` User-Agent (error 1010) — the provider sends an
+  explicit UA. And reasoning models (qwen) burn completion tokens on
+  thinking before emitting JSON; the ingest sends `reasoning_effort: "none"`
+  because truncated thinking fails Groq's JSON-mode validation outright.
 
 ## 5. Security — the key never leaves the backend
 
-- `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` live in `backend/.env` (gitignored;
-  `.env.example` documents the shape). Never in code, never in the repo.
+- `GROQ_API_KEY` / `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` live in
+  `backend/.env` (gitignored; `.env.example` documents the shape). Never in
+  code, never in the repo.
 - **The frontend NEVER calls an AI provider directly.** All AI traffic goes
   browser → FastAPI → provider. The browser bundle contains no AI key, no
   provider URL, no model name. Enforced structurally by the project rule that
@@ -156,8 +178,8 @@ only bounds runaway cost.
 
 `/ai/*` (and `/simulate`) have **no rate limiting yet** — tracked in
 BACKEND_LOG's open items since 2026-07-08, and now urgent for `/ai/explain`:
-every call burns free-tier Gemini quota, and the ingest already proved the
-daily quota is reachable. Plan: per-IP (or per-user once auth is wired into
+every call burns free-tier Groq quota (per-minute AND per-day caps), and the
+ingest already proved the daily quota is reachable. Plan: per-IP (or per-user once auth is wired into
 the sandbox) token bucket at the FastAPI layer, plus a low daily cap on
 anonymous AI calls. Do this BEFORE any public URL exists.
 
@@ -167,8 +189,9 @@ The checklist that makes this a ~30-minute change, not a refactor:
 
 1. Write (or reuse) a provider module exposing `generate_json(system, user,
    *, max_tokens, response_schema)` semantics and an `AIUnavailable`
-   exception. (An OpenAI/anywhere version mirrors `services/gemini.py` —
-   ~100 lines of REST.)
+   exception. (`services/groq.py` is the proof: an OpenAI-compatible mirror
+   of `services/gemini.py` in ~150 lines of REST, written in one sitting for
+   the 2026-07-26 swap.)
 2. Point the feature service's import at it (`services/ai_explain.py` imports
    `generate_json` + `AIUnavailable` from exactly one place).
 3. Map the schema: Gemini's `responseSchema` ↔ Anthropic tool-use /

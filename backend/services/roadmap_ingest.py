@@ -14,8 +14,8 @@ restructured result is persisted. Run:
     python -m services.roadmap_ingest --days 1-7 --publish
     python -m services.roadmap_ingest --all           # dry transform, unpublished
 
-Requires ANTHROPIC_API_KEY (degrades to AIUnavailable otherwise, exactly like
-the other AI features).
+Requires GROQ_API_KEY (degrades to AIUnavailable otherwise, exactly like the
+other AI features). Model: GROQ_INGEST_MODEL (default qwen/qwen3.6-27b).
 """
 from __future__ import annotations
 
@@ -37,9 +37,10 @@ from sqlalchemy import select  # noqa: E402
 
 from db.session import SessionLocal
 from models.roadmap_lesson import RoadmapLesson
-# Gemini provider (isolated to ingest; in-app AI stays on Claude — see
-# BACKEND_LOG.md 2026-07-16 "Gemini for roadmap ingest").
-from services.gemini import AIUnavailable, generate_json
+# Groq provider (DECISION 2026-07-26: ingest runs on qwen/qwen3.6-27b via
+# Groq — the key with quota; supersedes the 2026-07-16 Gemini note. See
+# BACKEND_LOG.md).
+from services.groq import GROQ_INGEST_MODEL, AIUnavailable, generate_json
 from services.roadmap import curriculum, module_of
 
 # Source repo — reference input only. Overridable so the source can move or be
@@ -149,13 +150,40 @@ _SCHEMA = {
 }
 
 
+# Groq free tier enforces a per-minute token cap (8k/min for qwen) checked at
+# request time against prompt + max_completion_tokens (HTTP 413 — never
+# retryable). Budget both sides of the request: truncate the reference when it
+# is oversized (it's raw material for a rewrite, not the product) and give the
+# rest of the budget to the output. Estimates use a conservative 3 chars/token.
+_TPM_BUDGET = 7600
+_MIN_OUTPUT_TOKENS = 2800
+
+
+def _est_tokens(text: str) -> int:
+    return max(1, len(text) // 3)
+
+
 def transform(day: int, source_md: str) -> dict[str, Any]:
-    """Reference article -> original structured lesson (via Gemini)."""
+    """Reference article -> original structured lesson (via Groq/qwen)."""
+    # ~400 tokens covers the injected response schema + message framing.
+    overhead = _est_tokens(_SYSTEM) + 400
+    max_source_chars = (_TPM_BUDGET - _MIN_OUTPUT_TOKENS - overhead) * 3
+    source = source_md
+    if len(source) > max_source_chars:
+        cut = source.rfind("\n", 0, max_source_chars)
+        source = source[:cut if cut > 0 else max_source_chars]
+        source += "\n\n[reference truncated to fit the model's context budget]"
+    user = f"Reference article (Day {day}) — raw material only:\n\n{source}"
+    max_out = min(8192, _TPM_BUDGET - overhead - _est_tokens(user))
     text = generate_json(
         _SYSTEM,
-        f"Reference article (Day {day}) — raw material only:\n\n{source_md}",
-        max_tokens=16384,
+        user,
+        model=GROQ_INGEST_MODEL,
+        max_tokens=max_out,
         response_schema=_SCHEMA,
+        # No thinking: the 8k/min cap leaves no budget for reasoning tokens,
+        # and truncated thinking fails Groq's JSON-mode validation outright.
+        reasoning_effort="none",
     )
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text).strip()
     return json.loads(text)
@@ -249,7 +277,7 @@ def main() -> None:
     try:
         ingest_days(days, publish=args.publish)
     except AIUnavailable as e:
-        raise SystemExit(f"AI unavailable: {e}. Set ANTHROPIC_API_KEY to run ingestion.")
+        raise SystemExit(f"AI unavailable: {e}. Set GROQ_API_KEY to run ingestion.")
 
 
 if __name__ == "__main__":
