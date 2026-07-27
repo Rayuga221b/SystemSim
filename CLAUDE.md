@@ -95,6 +95,15 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   budgets `prompt + max_completion_tokens` under the 8k/min free-tier cap
   (413 is checked at request time and never retryable). Mentor stays on
   Claude; `services/gemini.py` kept for swap-back.
+- **Roadmap ingest finished (2026-07-27):** all 76 lessons ingested via Groq
+  qwen and published — 0 remaining, 65/76 carry a Mermaid diagram. The batch
+  survived a daily-quota wall and a mid-run session interruption; the
+  idempotent per-`day` upsert (not a longer retry loop) is why resuming was
+  a no-op rather than a rebuild. Two lessons had ASCII diagrams slip past
+  the ingest prompt's "always Mermaid" rule — fixed by hand via
+  `scripts/convert_ascii_to_mermaid.py` (one became a table; no Mermaid type
+  fits a bit-field layout). Full story + interview framing:
+  `docs/AI_INTEGRATION.md` §5, `backend/BACKEND_LOG.md` (2026-07-27).
 - **Diagrams are our own assets, never the source's.** Flowcharts render via
   **Mermaid** (```mermaid blocks → themed SVG, `components/ui/Mermaid.jsx`);
   static figures are hand-authored SVGs in `backend/static/roadmap/diagrams/`
@@ -158,7 +167,8 @@ Prompt shape that works best in this repo:
 2 Wireframes ✅ · 3 Repo + CLAUDE.md ✅ · 4 Frontend canvas ✅ ·
 5 Simulation engine ✅ · 6 Wire FE↔BE ✅ · 7 Case studies (curated JSON; scraper
 ingest still stubbed) ✅ · 8 Challenges + scoring ✅ · 9 Auth + save + dashboard ✅ ·
-10 AI features ✅ (needs ANTHROPIC_API_KEY) · **11 Polish + deploy (current)**
+10 AI features ✅ (explainer + roadmap ingest live on Groq; mentor still
+needs a real ANTHROPIC_API_KEY) · **11 Polish + deploy (current)**
 
 Big build 2026-07-07: sandbox canvas, challenge workspace + scoring, case-study
 reader + "Simulate This", learn layer (`frontend/src/data/concepts.js`), auth
