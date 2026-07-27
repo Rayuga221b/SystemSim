@@ -53,6 +53,30 @@ flowchart TD
     L2 --> L3[API Gateway<br/>auth · rate limiting · routing]
     L3 --> MS[Microservices<br/>User · Billing · Search]
 ```""",
+    # 2026-07-27: qwen (Groq ingest) emitted ASCII despite the Mermaid prompt
+    # rule in two lessons — same fix path as the pre-prompt-change days above.
+    40: """```mermaid
+flowchart TD
+    R[com.myapp] --> O[orders/]
+    R --> I[inventory/]
+    R --> S[shared/<br/>logging · config]
+    O --> OA[api/<br/>public interfaces]
+    O --> OD[domain/<br/>core business logic]
+    O --> OAP[application/<br/>use cases]
+    O --> OI[infrastructure/<br/>DB · external integrations]
+    I --> IA[api/]
+    I --> ID[domain/]
+    I --> IAP[application/]
+    I --> II[infrastructure/]
+```""",
+    # Day 76 is a 64-bit field layout — no Mermaid diagram type fits a bit
+    # map, so the replacement is a table (the dict value is just markdown).
+    76: """| Field | Bits | Purpose |
+|---|---|---|
+| Sign bit | 1 | Always 0 — keeps the ID a positive number |
+| Timestamp | 41 | Milliseconds since a custom epoch |
+| Machine ID | 10 | Which generator node produced it (up to 1,024 nodes) |
+| Sequence | 12 | Per-millisecond counter (4,096 IDs per ms per node) |""",
 }
 
 # a fenced block (any/no language) that contains box-drawing characters

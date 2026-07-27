@@ -3,13 +3,13 @@
 How SystemSim uses LLMs, and the WHY behind each decision. Written as
 interview-prep material: every section is a talking point you can defend.
 
-Current feature map (2026-07-26):
+Current feature map (2026-07-27):
 
 | Feature | Endpoint | Provider | Service |
 |---|---|---|---|
 | Simulation explainer | `POST /ai/explain` | **Groq** (`llama-3.3-70b-versatile`) | `services/ai_explain.py` → `services/groq.py` |
 | Case-study mentor | `POST /ai/mentor` | Claude (`claude-sonnet-4-20250514`) | `services/claude.py` |
-| Roadmap lesson ingest | offline batch (`python -m services.roadmap_ingest`) | **Groq** (`qwen/qwen3.6-27b`) | `services/roadmap_ingest.py` → `services/groq.py` |
+| Roadmap lesson ingest | offline batch (`python -m services.roadmap_ingest`) — **complete, 76/76 published** | **Groq** (`qwen/qwen3.6-27b`) | `services/roadmap_ingest.py` → `services/groq.py` |
 
 (`services/gemini.py` is kept intact for swap-back; nothing imports it by
 default anymore.)
@@ -108,10 +108,19 @@ this same schema rode the native `responseSchema` controlled generation):
 
 WHY: the frontend renders sections and per-node cards (with "Show on canvas"
 deep-links via `node_id`) — impossible with a text blob, fragile with
-"please return JSON" prompting. JSON mode guarantees the text parses; the
-schema steers the shape and `_validate()` stays the backstop. The roadmap
-ingest proved the need first (its multi-line markdown field broke
-`json.loads` under free-text prompting).
+"please return JSON" prompting. The roadmap ingest proved the need first
+(its multi-line markdown field broke `json.loads` under free-text
+prompting); JSON mode plus the injected schema plus `_validate()` as the
+backstop is the fix.
+
+**Correction, from the field (2026-07-27):** `json_object` mode makes
+invalid JSON *rare*, not impossible — one roadmap ingest day hit Groq's own
+`HTTP 400 json_validate_failed` (the model's generation failed Groq's
+server-side JSON check, not ours). The real safety net was never the mode's
+guarantee; it's that the ingest already treats every unit of work (one day,
+one call) as independently retryable and skips-not-aborts on failure. Don't
+oversell a provider guarantee in an interview — describe the retry/skip
+design that makes the guarantee's occasional failure harmless instead.
 
 **Validation after parsing.** Trust but verify: `_validate()` shape-checks
 the parsed output, drops malformed bottleneck entries, and caps fixes at 3.
@@ -141,7 +150,45 @@ enhancement, not a dependency.
   thinking before emitting JSON; the ingest sends `reasoning_effort: "none"`
   because truncated thinking fails Groq's JSON-mode validation outright.
 
-## 5. Security — the key never leaves the backend
+## 5. Batch ingest resilience — RPM vs TPM vs TPD, and why idempotency beats retrying harder
+
+The roadmap ingest is the one AI feature that's a **long-running offline
+batch** (76 sequential model calls), not a single request-response — a
+different failure surface than `/ai/explain`, worth its own interview
+answer.
+
+**Three rate-limit dimensions, only two of which a retry loop can absorb.**
+Groq's free tier caps *requests per minute*, *tokens per minute*, and
+*tokens per day*. `groq._post` retries the first two (their `retry-after`
+is seconds to low-minutes — cheap to wait out). The daily cap is different
+in kind: the wait it reports can be 30-40 minutes and shrinks unpredictably
+run to run. Stretching the in-process retry to cover it would mean a batch
+job blocking for most of an hour on one HTTP call — a worse failure mode
+than just failing that unit of work. **The fix isn't a longer retry; it's
+making failure cheap to recover from at a higher layer.**
+
+**That's what the per-day idempotent upsert buys.** `upsert()` keys on
+`RoadmapLesson.day` (unique) — re-running a batch that includes already-done
+days is a no-op for those days. Combined with `ingest_days()` already
+catching exceptions per-day and reporting failures instead of aborting
+(2026-07-16 decision), a batch that dies at day 53 of 76 for *any* reason —
+daily quota, a dropped connection, the host process itself exiting — needs
+no bookkeeping to resume: query which days exist, and pass the rest back in.
+**The interview point:** for a multi-unit batch job, invest in cheap,
+verifiable resumability (idempotent writes + a state you can query) over
+investing in the retry loop surviving longer. Retries handle transient
+failures; idempotency handles the failure modes retries can't cover
+(process death, daily quotas, anything measured in tens of minutes).
+
+**Corollary: trust the data, not the process status.** When the batch's own
+host session ended mid-run, the background task's own completion signal was
+ambiguous ("may have been running when the process exited"). The
+trustworthy check was `SELECT day FROM roadmap_lessons` against the
+curriculum's 76 expected days — the persisted state *is* the ground truth
+for a job built around idempotent per-unit writes, so verifying it directly
+is both correct and the path of least effort.
+
+## 6. Security — the key never leaves the backend
 
 - `GROQ_API_KEY` / `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` live in
   `backend/.env` (gitignored; `.env.example` documents the shape). Never in
@@ -155,7 +202,7 @@ enhancement, not a dependency.
   happens, so users can't tamper with the system prompt; and it's the future
   chokepoint for rate limiting, auth, caching, and logging.
 
-## 6. Latency & UX
+## 7. Latency & UX
 
 - LLM calls are seconds, not the ~10ms sim loop, so the two are decoupled:
   simulation results render immediately (the canvas is optimistic — project
@@ -174,7 +221,7 @@ enhancement, not a dependency.
   complete card set; streaming partial JSON adds parsing complexity for
   little perceived-latency win at ~2-4s responses. Revisit if latency grows.
 
-## 7. Before deploy — rate limiting (TODO)
+## 8. Before deploy — rate limiting (TODO)
 
 `/ai/*` (and `/simulate`) have **no rate limiting yet** — tracked in
 BACKEND_LOG's open items since 2026-07-08, and now urgent for `/ai/explain`:
@@ -183,7 +230,7 @@ ingest already proved the daily quota is reachable. Plan: per-IP (or per-user on
 the sandbox) token bucket at the FastAPI layer, plus a low daily cap on
 anonymous AI calls. Do this BEFORE any public URL exists.
 
-## 8. How to swap providers later
+## 9. How to swap providers later
 
 The checklist that makes this a ~30-minute change, not a refactor:
 

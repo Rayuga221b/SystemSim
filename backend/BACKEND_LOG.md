@@ -443,3 +443,98 @@ the per-minute cap via retry-after).
 - [ ] Rate limiting on `/ai/*` before public deploy (now burns Groq quota:
       per-minute AND per-day caps)
 - [ ] Frontend mentor UI still pending an Anthropic key
+
+---
+
+## 2026-07-27 — Roadmap ingest finished: 76/76 lessons live
+
+Closes out the ingest that's been running since 2026-07-16 (Gemini → Groq
+migration above). This entry is less about new code and more about the
+**operational shape of a long-running AI batch job** — the interview story
+is in how it survived interruptions, not the happy path.
+
+### 1. The daily-quota wall — and why we didn't try to out-wait it
+
+Groq's free tier caps `qwen/qwen3.6-27b` at **200,000 tokens/day**, separate
+from the per-minute cap `groq._post` already retries. The overnight batch
+hit it mid-run: `Rate limit reached ... on tokens per day (TPD): Limit
+200000, Used 198158 ... try again in 32m19s`. Deliberately did **not**
+stretch `_post`'s retry loop to cover this — the per-minute retry is capped
+at 120s for a reason (a hung process waiting 30-40 minutes on a single HTTP
+call is its own operational hazard, and the wait time shrinks unpredictably
+run to run as `Used` drifts). Instead: let those days fail through the
+pipeline's existing per-day try/except (`ingest_days` was already built to
+survive one bad day without aborting the batch — 2026-07-16 decision), then
+just re-run the reported failed days once the daily counter rolled over.
+**The idempotent `day`-unique upsert (`upsert()` in `roadmap_ingest.py`) is
+what makes this safe** — re-running a batch that includes already-done days
+is a no-op for those days, so there's no bookkeeping needed about exactly
+where a batch stopped.
+
+### 2. Session interruption — verify state, don't trust the transcript
+
+The batch was also running as a background shell when the *Claude Code
+session itself* ended mid-run. On resume, the task notification for that
+background process said "stopped... may have been running when the
+previous process exited" — an ambiguous signal, not a completion record.
+Rather than guess, the right move was to re-query the actual source of
+truth: `SELECT day FROM roadmap_lessons` diffed against the curriculum's
+76 expected days, which is cheap and unambiguous. This is the same
+principle as the day-level idempotency above, generalized: **when a batch
+job's own state (a DB row per unit of work) is more trustworthy than the
+process supervisor's status string, check the state, not the process.**
+
+### 3. Trust but verify: JSON mode isn't a schema guarantee
+
+Two days failed on retry for reasons unrelated to quota, both handled by
+the existing per-day resilience without new code:
+
+- **Day 67:** Groq itself returned `HTTP 400 json_validate_failed` — its
+  own JSON-object-mode generation produced invalid JSON server-side. This
+  is a correction to the 2026-07-26 entry's framing: Groq's `json_object`
+  mode makes invalid JSON *rare*, not impossible. The real safety net was
+  never the mode guarantee — it's `ingest_days` treating every day as
+  independently retryable.
+- **Day 74:** a bare `RemoteDisconnected` — ordinary transient network
+  failure, no special handling needed.
+
+Both succeeded on a plain retry (`--days 67,74`).
+
+### 4. Content-validation gap: the prompt rule isn't self-enforcing
+
+Two published lessons (days 40, 76) contained ASCII box-drawing diagrams
+despite the ingest system prompt's explicit "never ASCII, always Mermaid"
+rule (2026-07-16 decision). **The pipeline validates JSON *shape*
+(`_SCHEMA`) but has no check on markdown *style* inside `body_md`** — a
+model can satisfy the schema and still violate a prose-level house rule.
+Caught by a manual sweep (`set('│├└┌┐▶▼┼┘') & set(body_md)`) across all 76
+lessons post-ingest, not by the pipeline itself — this is the gap to close
+if ingest runs unattended again (e.g. reject/retry on a matched glyph set).
+
+Fixed via `scripts/convert_ascii_to_mermaid.py` (already existed for this
+exact class of problem from 2026-07-16's pre-prompt-fix lessons — idempotent,
+skips lessons with no ASCII fence, so reruns are free):
+
+- **Day 40** (module folder tree) → a `flowchart TD` reproduces the
+  parent/child structure Mermaid is made for.
+- **Day 76** (Snowflake ID 64-bit field layout) → a **markdown table**, not
+  Mermaid. No Mermaid diagram type represents a bit map; forcing one would
+  be worse than the ASCII it replaces. Worth saying explicitly in an
+  interview: the fix for "never do X" isn't always "always do Y instead" —
+  sometimes it's "do Y, except when the content doesn't fit Y's shape."
+
+### Final numbers
+
+76/76 lessons ingested and published. Avg body 6,412 chars, 65/76 contain a
+Mermaid diagram (the rest are diagram-free by content, not by gap), zero
+remaining ASCII-art, zero reasoning-model `<think>` leakage. Full backend
+suite still 51 passed (this work touched no application code, only the
+one-off conversion script).
+
+### Open items
+
+- [ ] Ingest pipeline has no automated style-conformance check (ASCII glyphs,
+      stray markdown fences) — currently a manual post-ingest sweep; worth a
+      cheap regex gate in `transform()` if ingest runs again unattended
+- [ ] Rate limiting on `/ai/*` before public deploy (carried over)
+- [ ] Frontend mentor UI still pending an Anthropic key (carried over)
