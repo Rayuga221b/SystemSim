@@ -2,6 +2,10 @@
 
 FastAPI + Python. Loaded when working in `backend/`.
 
+See `docs/INCIDENTS.md` for gotchas already hit in this backend (silent
+wrong-DB scripts, migration/`create_all` races, a database that went
+entirely empty) — check it before assuming new, unrelated behavior.
+
 ## Layout
 
 - `main.py` — app entry, CORS, router registration only. No business logic.
@@ -19,9 +23,11 @@ FastAPI + Python. Loaded when working in `backend/`.
   (build CLI), `mentor.py` (shared grounded-generation core: case_study /
   sandbox / general context modes), `chat.py` (`/ai/chat`-only: persistence +
   DB-backed rate limit on top of `mentor.py`) — see `docs/RAG.md`.
-- `db/` — SQLAlchemy `base.py` + `session.py` (engine, `get_db`). `alembic/` for
-  migrations. `models/` — `user`, `design`, `challenge_attempt`, `roadmap_lesson`,
-  `rag_chunk`, `ai_message`.
+- `db/` — SQLAlchemy `base.py` + `session.py` (engine, `get_db`). `DATABASE_URL`
+  is a hosted Neon Postgres branch (dev branch for local work) — see `.env`;
+  the SQLite fallback in `session.py` only kicks in when `DATABASE_URL` is
+  unset. `alembic/` for migrations. `models/` — `user`, `design`,
+  `challenge_attempt`, `roadmap_lesson`, `rag_chunk`, `ai_message`.
 - `dependencies.py` — `get_current_user` (Bearer JWT → User). Ownership-scoped
   routes MUST filter queries by the resolved `user_id` (no RLS backstop).
 - `data/` — `challenges.json`, `seed_urls.json`.
@@ -38,3 +44,14 @@ FastAPI + Python. Loaded when working in `backend/`.
 - AI prompts are always context-scoped (graph or case study in the prompt).
 - Use NetworkX for the graph; BFS traversal from the Client node.
 - Keep routes ≤ ~30 lines; push logic down.
+- **Any standalone script (`python -m scripts.x` / `python -m services.x`)
+  that touches the DB must call `load_dotenv()` at the top, before importing
+  `db.session`.** `main.py` loads `.env` on app startup; a bare script does
+  not get that for free, and `db/session.py` reads `DATABASE_URL` at import
+  time with a silent SQLite fallback if unset — no crash, just the wrong
+  database. See `docs/INCIDENTS.md` #3 (this exact bug already happened).
+- **Never let `create_all` be the first thing to touch a fresh database.**
+  Run `alembic upgrade head` against a new DB before ever starting the app —
+  otherwise tables get created without `alembic_version` being stamped, and
+  every later migration fails on "table already exists." See
+  `docs/INCIDENTS.md` #6.
