@@ -18,6 +18,7 @@ confirmed if it wasn't.
 | 2 | Background ingest processes died silently mid-run, twice | Fixed (use `nohup ... & disown`, not the harness's background flag alone) |
 | 3 | A migration script silently wrote to the wrong DB | Fixed (missing `load_dotenv()`) |
 | 4 | Neon free-tier child branches auto-delete after 24h by default | Fixed (disable expiry before treating a branch as permanent) |
+| 9 | A long AI-provider retry wait let the Neon connection go stale, crashing the whole ingest batch on `rollback()` | Fixed (`pool_pre_ping=True` + a hardened rollback handler) |
 | 5 | Multiple concurrent Claude Code sessions on this repo produce confusing symptoms | Not a bug — awareness only |
 | 6 | `alembic upgrade` on a DB that already has the schema fails; `stamp` is the fix | Fixed, see BACKEND_LOG 2026-07-28 |
 | 7 | SQLite silently drops tzinfo on read even from timezone-aware columns; Postgres doesn't | Fixed, see BACKEND_LOG 2026-07-29 |
@@ -197,3 +198,41 @@ with the fuller version:
   that a *feature* actually depends on at runtime is one clean-checkout
   away from silently missing; prefer content that travels with the DB row
   (text) over a sibling file on disk.
+
+## 9. Long AI-provider retries let the Neon connection go stale, crashing the batch
+
+**What happened:** twice during the post-migration roadmap re-ingest, the
+whole batch process crashed outright (not a per-day `[FAIL]`, the entire
+`python -m services.roadmap_ingest` process died) partway through a run
+that had real, expensive AI-provider quota already spent on lessons still
+in flight. Both times, the crash landed right after a day whose Groq call
+had to wait out a long rate-limit backoff (7–14 minutes, reported via
+`retry-after`).
+
+**Root cause:** `services/roadmap_ingest.py` holds one SQLAlchemy session
+open for the whole batch. Neon (like most hosted Postgres) closes
+connections that sit idle past some threshold. A multi-minute wait inside
+one day's AI call was long enough for that to happen. The per-day handler
+already catches the AI failure fine (`except Exception: db.rollback()`) —
+but `db.rollback()` itself, called on an already-dead connection, raises
+`psycopg2.OperationalError: SSL connection has been closed unexpectedly`.
+That second exception is *inside* the except block, so nothing in the loop
+catches it — it propagates all the way up and kills the process.
+
+**Status: fixed**, two layers:
+1. `db/session.py` — `pool_pre_ping=True` on the engine. SQLAlchemy's
+   standard fix for exactly this: a cheap liveness check before each
+   connection checkout, transparently reconnecting if it's dead. Fixes it
+   project-wide (the FastAPI app itself is equally exposed on a slow
+   request), not just for this script.
+2. `services/roadmap_ingest.py` — the per-day handler's `rollback()` is
+   now itself wrapped in a try/except that falls back to closing and
+   opening a fresh session, so even an unexpected second failure can't
+   take the whole batch down.
+
+**Lesson for future instances:** any script that holds one DB session open
+across a slow, retrying external call (AI providers with backoff being the
+obvious case in this project) is exposed to this. `pool_pre_ping` should be
+the default assumption for anything talking to hosted Postgres from a
+long-running process — don't wait to hit this a third time before adding
+it to a new script.
