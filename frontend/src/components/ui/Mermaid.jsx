@@ -323,10 +323,30 @@ export default function Mermaid({ chart }) {
 
   const openMaximized = () => {
     const svgEl = inlineWrapRef.current?.querySelector("svg");
-    const rect = svgEl?.getBoundingClientRect();
-    // Measured from the already-rendered inline copy — see MaximizedDiagram's
-    // docstring for why re-measuring a fresh injection is the fragile path.
-    if (rect?.width && rect?.height) setNatural({ width: rect.width, height: rect.height });
+    // Read the diagram's TRUE size from its viewBox, not its current
+    // on-page display size. The inline copy sits in a prose column that
+    // caps tall diagrams to a max-height for readability (sensible there),
+    // but getBoundingClientRect() on that constrained element reports the
+    // CAPPED size — e.g. a diagram with viewBox 570×918 (tall) measured as
+    // 570×448 (its display cap) once. Feeding that wrong, too-wide aspect
+    // ratio into the maximize modal's fit-to-viewport math undersizes the
+    // available height, so the diagram renders larger than it fits and the
+    // bottom gets clipped with no way to see it — verified live, this was a
+    // real bug, not a hypothetical one. viewBox is immune to whatever CSS
+    // the inline context applies, so it's the size to fit-to-viewport with.
+    const viewBox = svgEl?.getAttribute("viewBox");
+    const parts = viewBox?.trim().split(/\s+/).map(Number);
+    let width, height;
+    if (parts?.length === 4 && parts[2] > 0 && parts[3] > 0) {
+      [, , width, height] = parts;
+    } else {
+      // Fallback for the rare diagram whose SVG has no viewBox — the
+      // rendered inline size is the best available approximation.
+      const rect = svgEl?.getBoundingClientRect();
+      width = rect?.width;
+      height = rect?.height;
+    }
+    if (width && height) setNatural({ width, height });
     setMaximized(true);
   };
 
