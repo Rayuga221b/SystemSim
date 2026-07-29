@@ -40,6 +40,26 @@ def module_of(day: int) -> dict[str, Any] | None:
     return None
 
 
+def _sequence_map(db: Session) -> dict[int, int]:
+    """`day` -> 1-based position in the site's reading order (published only).
+
+    The curriculum's `day` field is the ORIGINAL source series' numbering —
+    fixed at ingest time, not sequential once re-grouped into our own module
+    order (e.g. "Messaging & Event-Driven" holds days 36, 34, 46, 31, 39).
+    `day` stays the internal key (ingest idempotency, slugs, source cache) —
+    project rule, never exposed as the reader-facing lesson number. This is
+    the one place that number is computed, so every page (sidebar, cards,
+    prev/next) shows the same sequence.
+    """
+    published_days = {
+        d for (d,) in db.execute(
+            select(RoadmapLesson.day).where(RoadmapLesson.published.is_(True))
+        )
+    }
+    seq = [d for d in _reading_order(curriculum()) if d in published_days]
+    return {d: i + 1 for i, d in enumerate(seq)}
+
+
 def overview(db: Session) -> dict[str, Any]:
     """Module-grouped list of published lessons + top-level meta.
 
@@ -52,11 +72,18 @@ def overview(db: Session) -> dict[str, Any]:
             select(RoadmapLesson).where(RoadmapLesson.published.is_(True))
         ).scalars()
     }
+    seq_map = _sequence_map(db)
 
     modules = []
     total = 0
     for mod in cur["modules"]:
-        cards = [published[d].card() for d in mod["days"] if d in published]
+        cards = []
+        for d in mod["days"]:
+            if d not in published:
+                continue
+            card = published[d].card()
+            card["number"] = seq_map[d]
+            cards.append(card)
         total += len(cards)
         modules.append({
             "id": mod["id"],
@@ -85,14 +112,11 @@ def get_lesson(db: Session, slug: str) -> dict[str, Any] | None:
     if lesson is None:
         return None
 
-    # prev/next along the curriculum reading order, skipping unpublished days.
-    order = _reading_order(curriculum())
-    published_days = {
-        d for (d,) in db.execute(
-            select(RoadmapLesson.day).where(RoadmapLesson.published.is_(True))
-        )
-    }
-    seq = [d for d in order if d in published_days]
+    seq_map = _sequence_map(db)
+    # seq_map's insertion order follows curriculum reading order (Python
+    # dicts preserve it) — recover the flat sequence from it directly rather
+    # than rebuilding the published-days filter a second time.
+    seq = list(seq_map.keys())
     try:
         i = seq.index(lesson.day)
     except ValueError:
@@ -104,13 +128,14 @@ def get_lesson(db: Session, slug: str) -> dict[str, Any] | None:
         sib = db.execute(
             select(RoadmapLesson).where(RoadmapLesson.day == day)
         ).scalar_one_or_none()
-        return {"slug": sib.slug, "title": sib.title, "day": sib.day} if sib else None
+        return {"slug": sib.slug, "title": sib.title, "number": seq_map[sib.day]} if sib else None
 
     prev_day = seq[i - 1] if i > 0 else None
     next_day = seq[i + 1] if 0 <= i < len(seq) - 1 else None
 
     mod = module_of(lesson.day)
     detail = lesson.detail()
+    detail["number"] = seq_map.get(lesson.day)
     detail["module_label"] = mod["label"] if mod else lesson.module
     detail["module_color"] = mod["color"] if mod else "#9B85FF"
     detail["prev"] = _sib(prev_day)

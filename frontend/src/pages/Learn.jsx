@@ -212,7 +212,7 @@ function RoadmapFeature() {
                       className="group flex items-center gap-3 rounded-xl border border-hairline/[0.07] bg-base/40 px-4 py-2.5 hover:border-hairline/[0.16] hover:bg-surface transition-colors">
                   <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-[10.5px] font-semibold"
                         style={{ backgroundColor: `${l.color}1c`, color: l.color }}>
-                    {String(l.day).padStart(2, "0")}
+                    {String(l.number).padStart(2, "0")}
                   </span>
                   <span className="min-w-0 flex-1 font-display text-[0.86rem] font-medium text-ink truncate">{l.title}</span>
                   <ArrowRight size={13} className="text-muted/30 group-hover:text-indigo-400 shrink-0 transition-colors" />
@@ -222,7 +222,7 @@ function RoadmapFeature() {
           )}
           {first && (
             <p className="mt-4 text-[11px] font-mono text-muted/40 uppercase tracking-wider">
-              Begins with Day {first.day} · {first.title}
+              Begins with Day {first.number} · {first.title}
             </p>
           )}
         </div>

@@ -43,7 +43,7 @@ function SidebarModule({ mod, activeSlug, onNavigate }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="w-full flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted/70 hover:text-ink mb-1 px-2 py-1.5 rounded-md hover:bg-hairline/[0.04] transition-colors"
+        className="w-full flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted/70 hover:text-ink mb-1 px-2 py-1.5 rounded-md hover:bg-hairline/[0.04] transition-colors"
       >
         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: mod.color }} />
         <span className="min-w-0 truncate text-left flex-1">{mod.label}</span>
@@ -73,17 +73,17 @@ function SidebarModule({ mod, activeSlug, onNavigate }) {
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={[
-                      "group flex items-center gap-2 rounded-lg px-2 py-1.5 text-[0.82rem] leading-snug transition-colors",
+                      "group flex items-center gap-2 rounded-lg px-2 py-1.5 text-[0.9rem] leading-snug transition-colors",
                       active
                         ? "bg-indigo-500/12 text-ink font-medium border border-indigo-500/25"
                         : "text-muted hover:text-ink hover:bg-hairline/[0.05] border border-transparent",
                     ].join(" ")}
                   >
                     <span
-                      className="w-5 shrink-0 text-center font-mono text-[9.5px]"
+                      className="w-5 shrink-0 text-center font-mono text-[11px]"
                       style={{ color: active ? mod.color : undefined }}
                     >
-                      {String(l.day).padStart(2, "0")}
+                      {String(l.number).padStart(2, "0")}
                     </span>
                     <span className="min-w-0 truncate">{l.title}</span>
                   </Link>
@@ -254,7 +254,7 @@ export default function RoadmapLesson() {
                     className="font-mono text-[10px] font-semibold uppercase tracking-wider rounded-md px-2 py-1"
                     style={{ backgroundColor: `${color}1c`, color }}
                   >
-                    Day {lesson.day}
+                    Day {lesson.number}
                   </span>
                   <span className="font-mono text-[10px] text-muted/60 uppercase tracking-wider">{lesson.module_label}</span>
                   <span className="flex items-center gap-1 font-mono text-[10px] text-muted/50">
@@ -320,13 +320,13 @@ export default function RoadmapLesson() {
                 <div className="mt-10 pt-6 border-t border-hairline/[0.06] grid grid-cols-2 gap-3">
                   {lesson.prev ? (
                     <Link to={`/learn/roadmap/${lesson.prev.slug}`} className="group flex flex-col gap-1 rounded-xl border border-hairline/[0.07] px-4 py-3 hover:border-hairline/[0.16] hover:bg-surface transition-colors">
-                      <span className="flex items-center gap-1 font-mono text-[10px] text-muted/50 uppercase tracking-wider"><ArrowLeft size={11} /> Prev · Day {lesson.prev.day}</span>
+                      <span className="flex items-center gap-1 font-mono text-[10px] text-muted/50 uppercase tracking-wider"><ArrowLeft size={11} /> Prev · Day {lesson.prev.number}</span>
                       <span className="font-display text-[0.86rem] text-ink font-medium truncate">{lesson.prev.title}</span>
                     </Link>
                   ) : <span />}
                   {lesson.next ? (
                     <Link to={`/learn/roadmap/${lesson.next.slug}`} className="group flex flex-col gap-1 items-end text-right rounded-xl border border-hairline/[0.07] px-4 py-3 hover:border-hairline/[0.16] hover:bg-surface transition-colors">
-                      <span className="flex items-center gap-1 font-mono text-[10px] text-muted/50 uppercase tracking-wider">Next · Day {lesson.next.day} <ArrowRight size={11} /></span>
+                      <span className="flex items-center gap-1 font-mono text-[10px] text-muted/50 uppercase tracking-wider">Next · Day {lesson.next.number} <ArrowRight size={11} /></span>
                       <span className="font-display text-[0.86rem] text-ink font-medium truncate w-full">{lesson.next.title}</span>
                     </Link>
                   ) : <span />}
