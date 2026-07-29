@@ -268,7 +268,15 @@ def ingest_days(days: list[int], publish: bool = False) -> None:
                 print(f"  [ok] day {day}: {lesson.slug} "
                       f"({'published' if lesson.published else 'draft'})")
             except Exception as e:  # noqa: BLE001 — batch must survive one failure
-                db.rollback()
+                try:
+                    db.rollback()
+                except Exception:  # noqa: BLE001 — a dead connection can make
+                    # rollback() itself raise; pool_pre_ping (db/session.py)
+                    # should prevent this, but a batch this expensive to redo
+                    # gets a second layer: get a fresh session rather than let
+                    # an already-caught failure crash the whole process.
+                    db.close()
+                    db = SessionLocal()
                 failed.append(day)
                 print(f"  [FAIL] day {day}: {type(e).__name__}: {e}")
     finally:
