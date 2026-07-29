@@ -100,6 +100,29 @@ export const api = {
   // Gemini runs server-side only — the frontend never holds an AI key.
   explain: (graph, result) =>
     request("/ai/explain", { method: "POST", body: { graph, result } }),
+  // → { answer, grounded, provider, sources: [{tag, source_type, slug, title,
+  //     heading, path, score}] } — sources come from RAG retrieval metadata
+  // (server-side), filtered to only what the answer actually cited, so
+  // citation chips always both link to real platform content AND back
+  // something the answer said.
   mentor: (case_study_slug, question) =>
     request("/ai/mentor", { method: "POST", body: { case_study_slug, question } }),
+  // Same contract as mentor(), scoped to a roadmap lesson instead of a case
+  // study — mutually exclusive with case_study_slug on the backend.
+  mentorRoadmap: (roadmap_slug, question) =>
+    request("/ai/mentor", { method: "POST", body: { roadmap_slug, question } }),
+
+  // ── floating global assistant (public — see FloatingChat.jsx; sending a
+  // message requires login, gated client-side with a sign-in prompt) ────────
+  // Same response shape as mentor(). context_type: "case_study" | "sandbox" |
+  // "roadmap" | "general"; pass context_slug for case_study/roadmap, graph/
+  // result for sandbox.
+  chatSend: (payload) => request("/ai/chat", { method: "POST", body: payload, auth: true }),
+  chatHistory: (context_type, context_slug) => {
+    const params = new URLSearchParams();
+    if (context_type) params.set("context_type", context_type);
+    if (context_slug) params.set("context_slug", context_slug);
+    const qs = params.toString();
+    return request(`/ai/chat/history${qs ? `?${qs}` : ""}`, { auth: true });
+  },
 };

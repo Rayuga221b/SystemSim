@@ -10,12 +10,18 @@ FastAPI + Python. Loaded when working in `backend/`.
   - `challenges.py` → GET `/challenges`, POST `/challenges/{id}/attempt`
   - `designs.py` → CRUD `/designs`
   - `casestudies.py` → GET `/casestudies`, GET `/casestudies/{slug}`
-  - `ai.py` → POST `/ai/explain`, POST `/ai/mentor`
+  - `ai.py` → POST `/ai/explain`, POST `/ai/mentor`, POST `/ai/chat` (auth
+    required), GET `/ai/chat/history` (auth required)
   - `admin.py` → POST `/admin/ingest`
 - `engine/simulation.py` — the SimulationEngine. **Satyam writes this by hand.**
 - `services/` — Claude API client, `auth.py` (bcrypt + JWT), scoring, ingestion.
+  RAG: `rag.py` (chunk+retrieve), `embeddings.py` (Gemini), `rag_index.py`
+  (build CLI), `mentor.py` (shared grounded-generation core: case_study /
+  sandbox / general context modes), `chat.py` (`/ai/chat`-only: persistence +
+  DB-backed rate limit on top of `mentor.py`) — see `docs/RAG.md`.
 - `db/` — SQLAlchemy `base.py` + `session.py` (engine, `get_db`). `alembic/` for
-  migrations. `models/` — `user`, `design`, `challenge_attempt`.
+  migrations. `models/` — `user`, `design`, `challenge_attempt`, `roadmap_lesson`,
+  `rag_chunk`, `ai_message`.
 - `dependencies.py` — `get_current_user` (Bearer JWT → User). Ownership-scoped
   routes MUST filter queries by the resolved `user_id` (no RLS backstop).
 - `data/` — `challenges.json`, `seed_urls.json`.

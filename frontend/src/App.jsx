@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Navbar       from "@/components/layout/Navbar";
 import Footer       from "@/components/layout/Footer";
 import SplashLoader from "@/components/layout/SplashLoader";
+import FloatingChat from "@/components/panels/FloatingChat";
 import { useStore } from "@/store";
 
 // Full-bleed canvas routes: no footer, the workspace owns the viewport.
@@ -56,6 +57,7 @@ export default function App() {
         <Navbar />
         <PageWrapper />
         {!isCanvasRoute && <Footer />}
+        <FloatingChat />
       </div>
     </SplashLoader>
   );

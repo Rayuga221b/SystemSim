@@ -168,8 +168,12 @@ def test_ai_explain_returns_503_without_groq_key(client, monkeypatch):
     assert r.status_code == 503
 
 
-def test_ai_mentor_returns_503_without_anthropic_key(client, monkeypatch):
+def test_ai_mentor_returns_503_without_any_provider(client, monkeypatch):
+    # The mentor chains Claude → Groq (services/mentor.py); only both keys
+    # missing yields 503. Retrieval short-circuits on the empty test index
+    # before ever calling the embeddings API, so no key stripping needed there.
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     slug = client.get("/casestudies").json()["case_studies"][0]["slug"]
     r = client.post("/ai/mentor", json={"case_study_slug": slug, "question": "Why?"})
     assert r.status_code == 503

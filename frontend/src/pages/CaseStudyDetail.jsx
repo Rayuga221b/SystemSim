@@ -13,6 +13,7 @@ import { DIFFICULTY_BADGE } from "@/data/constants";
 import { COMPONENT_BY_TYPE, CATEGORY_COLOR } from "@/lib/components";
 import BrandIcon from "@/components/ui/BrandIcon";
 import Prose from "@/components/ui/Prose";
+import SourceChips from "@/components/ui/SourceChips";
 import { BRAND_COLOR } from "./CaseStudies";
 
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
@@ -68,7 +69,7 @@ export default function CaseStudyDetail() {
     setMentorError(null);
     try {
       const res = await api.mentor(slug, text);
-      setAnswer({ q: text, a: res.answer });
+      setAnswer({ q: text, a: res.answer, sources: res.sources || [] });
       setQuestion("");
     } catch (e) {
       setMentorError(e.status === 503 ? "The AI mentor isn't configured on this server yet." : e.message);
@@ -262,13 +263,15 @@ export default function CaseStudyDetail() {
               </span>
             </SectionHeading>
             <p className="text-[0.875rem] text-muted leading-relaxed mb-4 max-w-[58ch] -mt-2">
-              A mentor scoped to this case study — it knows the problem, the solution, and the scale numbers above.
+              A mentor scoped to this case study — it knows the problem, the solution, and the scale
+              numbers above, and cites related SystemSim lessons when they back up its answer.
             </p>
 
             {answer && (
               <div className="mb-4 rounded-xl border border-hairline/[0.07] bg-surface p-5">
                 <p className="text-[12.5px] text-muted mb-3 italic">"{answer.q}"</p>
                 <p className="font-read text-[0.9375rem] text-ink/85 leading-relaxed whitespace-pre-wrap">{answer.a}</p>
+                <SourceChips sources={answer.sources} />
               </div>
             )}
             {mentorError && <p className="mb-3 text-[12.5px] text-muted">{mentorError}</p>}

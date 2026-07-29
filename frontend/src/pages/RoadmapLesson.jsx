@@ -13,9 +13,11 @@ import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, Clock, Menu, X, Check, ChevronDown, Lightbulb, Mic, PenTool,
+  Sparkles, Loader2, Send,
 } from "lucide-react";
 import { api } from "@/api/client";
 import Markdown from "@/components/ui/Markdown";
+import SourceChips from "@/components/ui/SourceChips";
 
 const READ_KEY = "systemsim_roadmap_read";
 const loadRead = () => {
@@ -152,6 +154,12 @@ export default function RoadmapLesson() {
   const [navOpen, setNavOpen] = useState(false);
   const [read, setRead] = useState(loadRead);
 
+  // Mentor — scoped to this lesson, mirrors CaseStudyDetail's inline mentor.
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState(false);
+  const [answer, setAnswer] = useState(null);
+  const [mentorError, setMentorError] = useState(null);
+
   // Sidebar nav is fetched once; lesson refetches per slug.
   useEffect(() => { api.getRoadmap().then(setOverview).catch(() => {}); }, []);
 
@@ -159,9 +167,27 @@ export default function RoadmapLesson() {
     setLesson(null);
     setError(null);
     setNavOpen(false);
+    setAnswer(null);
+    setMentorError(null);
     window.scrollTo({ top: 0 });
     api.getRoadmapLesson(slug).then(setLesson).catch((e) => setError(e.message));
   }, [slug]);
+
+  const ask = async (q) => {
+    const text = (q || question).trim();
+    if (!text) return;
+    setAsking(true);
+    setMentorError(null);
+    try {
+      const res = await api.mentorRoadmap(slug, text);
+      setAnswer({ q: text, a: res.answer, sources: res.sources || [] });
+      setQuestion("");
+    } catch (e) {
+      setMentorError(e.status === 503 ? "The AI mentor isn't configured on this server yet." : e.message);
+    } finally {
+      setAsking(false);
+    }
+  };
 
   // Opening a lesson marks it read.
   useEffect(() => {
@@ -305,6 +331,53 @@ export default function RoadmapLesson() {
                     </Link>
                   ) : <span />}
                 </div>
+
+                {/* AI mentor — scoped to this lesson, public (no login required) */}
+                <section className="mt-10 pt-8 border-t border-hairline/[0.06]">
+                  <h2 className="flex items-center gap-2 font-display font-semibold text-ink text-[1.05rem] mb-2">
+                    <Sparkles size={17} className="text-indigo-400" aria-hidden /> Ask the mentor
+                  </h2>
+                  <p className="text-[0.875rem] text-muted leading-relaxed mb-4 max-w-[58ch]">
+                    A mentor scoped to this lesson — it knows the material above and cites related
+                    SystemSim lessons or case studies when they back up its answer.
+                  </p>
+
+                  {answer && (
+                    <div className="mb-4 rounded-xl border border-hairline/[0.07] bg-surface p-5">
+                      <p className="text-[12.5px] text-muted mb-3 italic">"{answer.q}"</p>
+                      <p className="font-read text-[0.9375rem] text-ink/85 leading-relaxed whitespace-pre-wrap">{answer.a}</p>
+                      <SourceChips sources={answer.sources} />
+                    </div>
+                  )}
+                  {mentorError && <p className="mb-3 text-[12.5px] text-muted">{mentorError}</p>}
+
+                  <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="flex gap-2">
+                    <input
+                      value={question}
+                      onChange={(e) => setQuestion(e.target.value)}
+                      placeholder="e.g. How does this trade off against a simpler approach?"
+                      className="flex-1 bg-surface border border-hairline/[0.08] rounded-lg px-3.5 py-2.5 text-[13px] text-ink
+                                 placeholder:text-muted/50 outline-none focus:border-indigo-500/60"
+                      aria-label="Your question about this lesson"
+                    />
+                    <button
+                      type="submit"
+                      disabled={asking || !question.trim()}
+                      className="btn-primary flex items-center gap-2 text-white text-[13px] font-medium rounded-lg px-4 disabled:opacity-40"
+                    >
+                      {asking ? <Loader2 size={14} className="animate-spin" /> : <Send size={13} />}
+                      Ask
+                    </button>
+                  </form>
+                  <button
+                    type="button"
+                    onClick={() => ask("Explain this lesson like I'm a junior developer.")}
+                    disabled={asking}
+                    className="mt-2.5 font-mono text-[11px] text-indigo-300/80 hover:text-indigo-200 disabled:opacity-40"
+                  >
+                    → Explain this like I'm a junior dev
+                  </button>
+                </section>
 
                 {/* Attribution */}
                 {lesson.attribution && (

@@ -104,6 +104,37 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   `scripts/convert_ascii_to_mermaid.py` (one became a table; no Mermaid type
   fits a bit-field layout). Full story + interview framing:
   `docs/AI_INTEGRATION.md` §5, `backend/BACKEND_LOG.md` (2026-07-27).
+- **Mentor is RAG-grounded; retrieval is exact in-process search, no vector
+  DB.** DECISION (2026-07-28): `POST /ai/mentor` retrieves top-4 chunks from
+  the platform corpus (76 roadmap lessons + case studies, chunked into
+  `rag_chunks` ~500 rows) and cites them (`sources` in the response, chips in
+  the UI). Embeddings: Gemini `gemini-embedding-001` @ 768 dims
+  (`services/embeddings.py` — Groq has no embeddings endpoint). Retrieval:
+  exact cosine over an in-process numpy matrix (~1.5 MB) — a vector DB below
+  ~50k chunks is cost without benefit; pgvector is the documented upgrade
+  path, isolated behind `rag.retrieve()`. Generation: provider CHAIN
+  Claude→Groq (supersedes "mentor stays on Claude" operationally — a live
+  deploy can't 503 behind the placeholder Anthropic key; Claude auto-resumes
+  as preferred when a real key lands). RAG failure degrades to the ungrounded
+  prompt, never a 503. Index: `python -m services.rag_index build`,
+  content-hash-diffed + idempotent. Full write-up: `docs/RAG.md`.
+- **Floating global AI assistant, auth-gated; citations must be actually
+  cited, not just retrieved.** DECISION (2026-07-29): `services/mentor.py`
+  is now the shared grounded-generation core behind TWO surfaces —
+  `POST /ai/mentor` (per-case-study widget, unchanged contract) and
+  `POST /ai/chat` + `GET /ai/chat/history` (a floating chat bubble on every
+  page, `FloatingChat.jsx`, context-aware: case study / sandbox graph+result
+  / general). `/ai/chat` requires login — not a cosmetic restriction, it's
+  the precondition for the DB-backed rate limit in `services/chat.py`
+  (`ai_messages`, 20 msgs/10 min, `SELECT COUNT`, no Redis at this scale):
+  an anonymous endpoint has no identity to count against. FIX (found live):
+  `sources`/`grounded` used to reflect what retrieval found, not what the
+  answer used — an off-topic question returned 4 irrelevant citation chips
+  because their cosine scores barely cleared the noise floor; now filtered
+  to only `[S#]` tags the model's own text actually references. Also fixed:
+  the "Try it in the sandbox" boilerplate every lesson ends with was being
+  chunked/cited despite carrying no explanatory content — excluded at chunk
+  time. Full write-up: `docs/RAG.md` §3.5, §4.
 - **Diagrams are our own assets, never the source's.** Flowcharts render via
   **Mermaid** (```mermaid blocks → themed SVG, `components/ui/Mermaid.jsx`);
   static figures are hand-authored SVGs in `backend/static/roadmap/diagrams/`
@@ -117,7 +148,11 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   `services/`. Routes parse input, call a service, shape the response.
 - **AI calls are always context-scoped.** Graph state or case-study context is
   always in the prompt — never generic open-ended chat. WHY: relevant answers,
-  predictable token cost, no "chatbot" drift.
+  predictable token cost, no "chatbot" drift. One narrow, deliberate carve-out
+  (2026-07-29, see the mentor/chat decision above): the assistant may answer
+  from general knowledge, clearly labeled, but ONLY after retrieval finds
+  nothing relevant in the platform corpus — the corpus is still checked
+  first on every call, this isn't a route to unscoped chat.
 - **Auth swap: self-hosted, not Supabase.** DECISION (2026-07-05): rolled our
   own auth on self-hosted Postgres instead of Supabase Auth + RLS. WHY: learning
   value + interview talking points (how real auth is built), and full control

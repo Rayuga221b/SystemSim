@@ -42,6 +42,11 @@ def _ask(system: str, user: str) -> str:
     return "".join(block.text for block in message.content if block.type == "text")
 
 
+# Public alias for cross-service callers (services/mentor.py builds its own
+# prompt and only needs the transport). Internal helpers keep using _ask.
+ask = _ask
+
+
 def explain_simulation(graph: dict[str, Any], result: dict[str, Any]) -> str:
     """Explain WHY the sim result looks the way it does + one concrete fix."""
     system = (
@@ -59,20 +64,7 @@ def explain_simulation(graph: dict[str, Any], result: dict[str, Any]) -> str:
     return _ask(system, user)
 
 
-def case_study_mentor(case_study: dict[str, Any], question: str) -> str:
-    """Answer a question scoped strictly to one case study."""
-    context = {k: case_study.get(k) for k in
-               ("company", "title", "one_liner", "problem", "solution",
-                "scale_context", "lessons")}
-    system = (
-        "You are a mentor inside SystemSim answering questions about ONE "
-        "specific engineering case study, provided below. Ground every answer "
-        "in this material (you may add well-known general context where it "
-        "helps understanding). If asked something unrelated to the case "
-        "study, briefly redirect to it. Under 250 words, plain language."
-    )
-    user = (
-        f"CASE STUDY:\n{json.dumps(context, default=str)}\n\n"
-        f"QUESTION: {question}"
-    )
-    return _ask(system, user)
+# NOTE: case_study_mentor moved to services/mentor.py (2026-07-28) — the
+# mentor is now RAG-grounded and provider-chained; this file is transport only
+# for it (via `ask`). explain_simulation above is kept for swap-back parity
+# with services/ai_explain.py, same as services/gemini.py is kept.

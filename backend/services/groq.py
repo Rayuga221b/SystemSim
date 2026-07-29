@@ -108,6 +108,33 @@ def _strip_gemini_keys(schema: dict) -> dict:
     return schema
 
 
+def generate_text(system: str, user: str, *, model: str | None = None,
+                  max_tokens: int = 1024) -> str:
+    """One turn of plain prose (no JSON mode). Used by the mentor fallback,
+    where the answer is free text and the response envelope (sources etc.) is
+    assembled server-side from retrieval metadata — never parsed from the
+    model, so there's nothing for JSON mode to protect."""
+    payload = {
+        "model": model or GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "max_completion_tokens": max_tokens,
+        "temperature": 0.6,
+    }
+    data = _post(payload)
+    choices = data.get("choices") or []
+    if not choices:
+        raise AIUnavailable(f"Groq returned no choices: {json.dumps(data)[:300]}")
+    text = (choices[0].get("message", {}).get("content") or "").strip()
+    if not text:
+        raise AIUnavailable(
+            f"Groq empty content (finish_reason={choices[0].get('finish_reason')})."
+        )
+    return text
+
+
 def generate_json(system: str, user: str, *, model: str | None = None,
                   max_tokens: int = 8192, response_schema: dict | None = None,
                   reasoning_effort: str | None = None) -> str:

@@ -10,6 +10,7 @@ from db.base import Base
 if TYPE_CHECKING:
     from models.design import Design
     from models.challenge_attempt import ChallengeAttempt
+    from models.ai_message import AiMessage
 
 
 class User(Base):
@@ -26,3 +27,4 @@ class User(Base):
 
     designs: Mapped[list["Design"]] = relationship("Design", back_populates="owner", cascade="all, delete-orphan")
     challenge_attempts: Mapped[list["ChallengeAttempt"]] = relationship("ChallengeAttempt", back_populates="owner", cascade="all, delete-orphan")
+    ai_messages: Mapped[list["AiMessage"]] = relationship("AiMessage", back_populates="owner", cascade="all, delete-orphan")

@@ -3,16 +3,26 @@
 How SystemSim uses LLMs, and the WHY behind each decision. Written as
 interview-prep material: every section is a talking point you can defend.
 
-Current feature map (2026-07-27):
+Current feature map (2026-07-29):
 
 | Feature | Endpoint | Provider | Service |
 |---|---|---|---|
 | Simulation explainer | `POST /ai/explain` | **Groq** (`llama-3.3-70b-versatile`) | `services/ai_explain.py` → `services/groq.py` |
-| Case-study mentor | `POST /ai/mentor` | Claude (`claude-sonnet-4-20250514`) | `services/claude.py` |
+| Case-study mentor (**RAG-grounded**) | `POST /ai/mentor` | chain: Claude → **Groq** fallback | `services/mentor.py` → `services/rag.py` |
+| Floating global assistant (**RAG-grounded, auth required**) | `POST /ai/chat`, `GET /ai/chat/history` | chain: Claude → **Groq** fallback | `services/chat.py` → `services/mentor.py` |
+| RAG embeddings | offline index + per-query | **Gemini** (`gemini-embedding-001`) | `services/embeddings.py` |
 | Roadmap lesson ingest | offline batch (`python -m services.roadmap_ingest`) — **complete, 76/76 published** | **Groq** (`qwen/qwen3.6-27b`) | `services/roadmap_ingest.py` → `services/groq.py` |
 
-(`services/gemini.py` is kept intact for swap-back; nothing imports it by
-default anymore.)
+The mentor and the floating assistant share one grounded-generation core
+(`services/mentor.py`) — retrieval, prompt priority order (platform content
+first, general knowledge only as a labeled last resort), the citation
+contract, and the provider chain live in exactly one place. `services/chat.py`
+adds only what the floating surface needs on top: per-user persistence and a
+DB-backed rate limit (the reason it requires login where the case-study
+mentor doesn't). Full deep-dive, including corpus/chunking/retrieval design
+and both live-testing bugs found and fixed: **`docs/RAG.md`**.
+(`services/gemini.py` generation is kept intact for swap-back; the Gemini
+key now actively serves embeddings only.)
 
 ---
 
