@@ -16,7 +16,7 @@ confirmed if it wasn't.
 |---|---|---|
 | 1 | Local dev SQLite DB went from 76 lessons to entirely empty (all 6 tables) | **Unresolved cause** — data unrecoverable, worked around by moving to Neon |
 | 2 | Background ingest processes died silently mid-run, twice | Fixed (use `nohup ... & disown`, not the harness's background flag alone) |
-| 3 | A migration script silently wrote to the wrong DB | Fixed (missing `load_dotenv()`) |
+| 3 | A migration script silently wrote to the wrong DB | Fixed — recurred in 3 more scripts same day, all fixed together |
 | 4 | Neon free-tier child branches auto-delete after 24h by default | Fixed (disable expiry before treating a branch as permanent) |
 | 9 | A long AI-provider retry wait let the Neon connection go stale, crashing the whole ingest batch on `rollback()` | Fixed (`pool_pre_ping=True` + a hardened rollback handler) |
 | 5 | Multiple concurrent Claude Code sessions on this repo produce confusing symptoms | Not a bug — awareness only |
@@ -121,17 +121,29 @@ explicitly at the top of the file for exactly this reason (its own comment:
 here"). The new script skipped this and silently got the SQLite fallback
 instead of an error.
 
-**Status: fixed.** Added `load_dotenv()` before importing `db.session` in
-the script; re-ran, confirmed real rows in Neon this time.
+**Status: fixed — then found three more instances of it the same day.**
+Added `load_dotenv()` before importing `db.session` in the script; re-ran,
+confirmed real rows in Neon that time. Assumed fixed for good, but a later
+recovery task (running `attach_diagrams.py` against Neon) hit
+"day 64: no lesson (not ingested yet)" for a day that had just been
+confirmed present — same bug, different script. An audit
+(`grep -c load_dotenv backend/scripts/*.py`) found it in **four** scripts
+total: `attach_diagrams.py`, `convert_ascii_to_mermaid.py`,
+`replace_diagram_images_with_mermaid.py`, and `seed_roadmap.py` — the last
+of which also calls `create_all()`, so it would have silently *created
+tables* on the wrong database, not just queried it. All four fixed the
+same way in one pass.
 
-**Lesson for future instances:** any new standalone script under
-`backend/scripts/` or run via `python -m services.x` that touches the
-database MUST call `load_dotenv()` at the very top, before importing
-anything that reads env vars at import time (`db.session`, the AI provider
-modules that read API keys at module load). This fails *silently* — no
-crash, no traceback, just the wrong target — which is worse than an error.
-Grep for `load_dotenv` in an existing standalone script
-(`services/roadmap_ingest.py`) before writing a new one.
+**Lesson for future instances:** this bug doesn't get fixed once — it gets
+reintroduced every time a new standalone script is written by copy-pasting
+an *older* script that predates the original fix, rather than a
+already-correct one. Two mitigations, both cheap: (1) before trusting any
+`backend/scripts/*.py` output against Neon, `grep load_dotenv` that
+specific file first — don't assume "it's a script in this repo" means
+it's safe; (2) periodically audit all of them at once
+(`for f in scripts/*.py; do grep -q "from db.session import" "$f" &&
+echo "$f: $(grep -c load_dotenv "$f")"; done`) rather than waiting to
+trip over each one individually.
 
 ## 4. Neon free-tier child branches auto-delete after 24 hours by default
 
