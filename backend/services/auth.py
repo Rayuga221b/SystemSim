@@ -5,9 +5,12 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 # Fail-soft in dev: generate an ephemeral secret (tokens die on restart) and
-# warn loudly. Production MUST set JWT_SECRET — see .env.example.
+# warn loudly. Fail-hard in production — a silently ephemeral secret there
+# means every deploy/restart logs everyone out with no visible error.
 SECRET_KEY = os.getenv("JWT_SECRET")
 if not SECRET_KEY:
+    if os.getenv("ENVIRONMENT") == "production":
+        raise RuntimeError("JWT_SECRET must be set when ENVIRONMENT=production")
     import secrets
     SECRET_KEY = secrets.token_hex(32)
     print("WARNING: JWT_SECRET not set — using an ephemeral dev secret. "

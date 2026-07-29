@@ -1,0 +1,11 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.db
+.env
+.env.local
+data/roadmap_source_cache/
+static/roadmap/
+tests/
+.git/
