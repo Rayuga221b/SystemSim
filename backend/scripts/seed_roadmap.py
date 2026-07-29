@@ -12,15 +12,24 @@ Idempotent: upserts by `day`.
 """
 from __future__ import annotations
 
-import re
+from dotenv import load_dotenv
 
-from sqlalchemy import select
+# Standalone script — see docs/INCIDENTS.md #3: without this, DATABASE_URL
+# (Neon) isn't visible and db.session silently falls back to empty local
+# SQLite instead of erroring — this script additionally calls create_all(),
+# so the bug would have silently CREATED tables on the wrong database too.
+# Must precede the db.session import.
+load_dotenv()
 
-from db.base import Base
-from db.session import SessionLocal, engine
-import models  # noqa: F401 register metadata
-from models.roadmap_lesson import RoadmapLesson
-from services.roadmap import module_of
+import re  # noqa: E402
+
+from sqlalchemy import select  # noqa: E402
+
+from db.base import Base  # noqa: E402
+from db.session import SessionLocal, engine  # noqa: E402
+import models  # noqa: F401,E402 register metadata
+from models.roadmap_lesson import RoadmapLesson  # noqa: E402
+from services.roadmap import module_of  # noqa: E402
 
 ATTRIBUTION = (
     "Original lesson written for SystemSim. Topic and sequencing informed by the "
@@ -205,7 +214,13 @@ That "read-heavy and immutable" observation is worth more than any box you could
 
 A **client** (browser, mobile app, another service) sends a **request**; a **server** does some work and sends back a **response**. The client initiates, the server responds — that asymmetry is the whole model.
 
-![The client–server round trip: the client sends a request, the server returns a response.](/static/roadmap/diagrams/client-server.svg)
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    C->>S: Request
+    S->>C: Response
+```
 
 The diagram is deliberately trivial, because every "big" architecture is just this picture with more boxes inserted along the arrow. A load balancer sits on the arrow and fans requests to many servers. A cache sits on the arrow and short-circuits the trip. A CDN moves the server closer to the client. None of it changes the fundamental shape.
 
@@ -360,7 +375,20 @@ When something does break, how much does it take with it? Good designs **contain
 
 A request flows down these layers and a response flows back up:
 
-![The seven layers of a high-level design, front to back — a request flows down and a response flows back up.](/static/roadmap/diagrams/seven-layers.svg)
+```mermaid
+flowchart TD
+    A(["Client"]) -->|request| B["Edge / CDN"]
+    B -->|request| C["Load Balancing"]
+    C -->|request| D["Application / Services"]
+    D -->|request| E["Caching"]
+    E -->|request| F[("Data Stores")]
+    D -.-> G[["Async / Workers"]]
+    F -.->|response| E
+    E -.->|response| D
+    D -.->|response| C
+    C -.->|response| B
+    B -.->|response| A
+```
 
 | # | Layer | Job |
 |---|-------|-----|

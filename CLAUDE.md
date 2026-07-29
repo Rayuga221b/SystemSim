@@ -8,6 +8,13 @@ This file is read at the start of every Claude Code session. Keep it lean.
 Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
 (loaded lazily when you work in those trees).
 
+**Before debugging "why is X missing/empty," read `docs/INCIDENTS.md`.** It's
+a short, append-only list of things that broke this project before —
+including a database that went from 76 rows to entirely empty with the
+cause never confirmed. Checking actual DB row counts before assuming a
+route or frontend bug saves real time; this file exists because that
+lesson was learned the hard way, more than once.
+
 ---
 
 ## The three modes
@@ -23,9 +30,13 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
 
 - Frontend: React + Vite, React Flow (canvas), Tailwind, shadcn/ui, Zustand
 - Backend: FastAPI (Python), NetworkX (graph), BeautifulSoup (scraping)
-- DB/Auth: self-hosted Postgres + custom FastAPI auth (SQLAlchemy + Alembic +
-  JWT). Local via docker-compose; AWS later. (Swapped from Supabase — see
-  "Auth swap" note under Decisions.)
+- DB/Auth: hosted Postgres (Neon) + custom FastAPI auth (SQLAlchemy + Alembic
+  + JWT). DECISION (2026-07-29): dev and prod both point at Neon now (branch
+  per dev — see "DB moved to Neon" under Decisions), not a local SQLite file
+  — see `docs/INCIDENTS.md` #1 for why. `docker-compose.yml`'s local Postgres
+  and the SQLite fallback in `db/session.py` both still exist as offline
+  options, but Neon is what's actually used day to day. (Auth itself was
+  swapped from Supabase — see "Auth swap" note under Decisions.)
 - AI: split by feature — the **simulation explainer** and roadmap ingest run
   on **Groq** (isolated provider `services/groq.py`; explainer =
   `GROQ_MODEL`, default `llama-3.3-70b-versatile`; ingest =
@@ -36,7 +47,11 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   `docs/AI_INTEGRATION.md` for the full architecture.
 - Content rendering: `react-markdown` + `remark-gfm` + `rehype-highlight`
   (roadmap lessons), `mermaid` (flowcharts). Long-form only; UI stays on Prose.
-- Hosting: Vercel (frontend), AWS (backend + Postgres) — was Render/Supabase
+- Hosting: Vercel (frontend), **Fly.io** (backend) — DECISION (2026-07-29,
+  confirmed, not yet deployed): `fly.toml` + `Dockerfile` already exist,
+  `release_command = alembic upgrade head` wired for auto-migration on
+  deploy. Supersedes the earlier "AWS" plan below, which was never acted on.
+  DB is Neon (see above), hosted independently of where the backend runs.
 
 ---
 
@@ -153,6 +168,32 @@ Component-specific rules live in `frontend/CLAUDE.md` and `backend/CLAUDE.md`
   from general knowledge, clearly labeled, but ONLY after retrieval finds
   nothing relevant in the platform corpus — the corpus is still checked
   first on every call, this isn't a route to unscoped chat.
+- **DB moved to hosted Neon Postgres — dev included, not just prod.**
+  DECISION (2026-07-29, Satyam's call): local dev's SQLite file had gone
+  completely empty with the cause never confirmed (`docs/INCIDENTS.md` #1) —
+  the second time this class of "silent local data loss" surfaced in the
+  project's history. Rather than keep debugging a local file, dev now points
+  at a Neon **`dev` branch** (child of the `production` branch, Neon's
+  git-like data branching), so local work has real persistence without
+  needing a teammate or a second machine to notice something vanished.
+  `alembic upgrade head` must run against a fresh branch BEFORE the app ever
+  starts (`main.py`'s `create_all` would otherwise create tables without
+  stamping `alembic_version`, breaking future migrations — see
+  `docs/INCIDENTS.md` #6 for the same class of mistake already made once).
+  `db/session.py`'s SQLite fallback stays in the code (zero-config
+  contributor bootstrapping, harmless when unused), but is not what runs day
+  to day anymore. `services/roadmap_ingest.py` and friends now write
+  directly to Neon via `DATABASE_URL` in `.env`. Hosting (Fly.io, see above)
+  is a separate, deliberately deferred decision from this one.
+- **Google OAuth — deferred, not decided against.** Satyam wants real
+  outside users, not just a portfolio demo, so a password field is real
+  signup friction worth removing. Not started: needs its own Google Cloud
+  OAuth consent-screen setup (an external account step, same category as
+  the Neon signup above) before any code changes. Would run ALONGSIDE the
+  existing bcrypt+JWT auth (`services/auth.py`), not replace it — that auth
+  is itself a documented interview talking point (see "Auth swap" below)
+  and already works. Pick this up as its own task, not folded into
+  unrelated work.
 - **Auth swap: self-hosted, not Supabase.** DECISION (2026-07-05): rolled our
   own auth on self-hosted Postgres instead of Supabase Auth + RLS. WHY: learning
   value + interview talking points (how real auth is built), and full control

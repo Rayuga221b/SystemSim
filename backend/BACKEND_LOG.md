@@ -729,3 +729,152 @@ history reload-and-refetch verified across a hard page reload.
       Docker in this environment)
 - [ ] Frontend mentor UI still pending a real `ANTHROPIC_API_KEY` to
       prefer Claude in practice (currently every live answer is Groq)
+
+## 2026-07-29 — 7 hand-authored diagrams depended on static assets that were
+## never committed; converted to Mermaid, same fix as the ASCII diagrams
+
+Pre-deploy audit found 7 roadmap lessons (days 4, 13, 22, 28, 45, 64, 72)
+referencing `![]()` image markdown pointing at
+`/static/roadmap/diagrams/*.svg` — 5 attached by `scripts/attach_diagrams.py`,
+2 hardcoded in `scripts/seed_roadmap.py`. Those SVGs were hand-authored
+locally at some point but `backend/static/roadmap/` is gitignored ("ingest
+build artifacts") and the files don't exist anywhere on disk, in git history,
+or anywhere searchable on this machine — the environment that originally
+authored/attached them is gone. Same failure mode already hit and fixed once
+for the 2 ASCII-diagram lessons (`convert_ascii_to_mermaid.py`); this is the
+same fix applied to the remaining 7.
+
+Fix: both source scripts now emit Mermaid fenced blocks directly into
+`body_md` instead of image references — Mermaid is already the platform's
+diagram mechanism (CLAUDE.md: "Diagrams are our own assets... Flowcharts
+render via Mermaid... never ASCII"), travels as text in the DB row, and
+renders client-side (`Mermaid.jsx`), so there's no static-file dependency at
+all going forward. Added `scripts/replace_diagram_images_with_mermaid.py` to
+patch any lesson rows that already have the old image markdown baked in
+(regex swap, idempotent) — needed because the two script edits only change
+what future runs produce, not rows already ingested wherever the real
+76-lesson data lives (this checkout's local SQLite has 0 roadmap rows, so
+the migration script has to be run against wherever that actually is —
+Neon/Postgres — before or during deploy).
+
+Not independently render-verified against the actual `mermaid` npm package
+(no jsdom in this environment, and adding it just for a one-off check wasn't
+worth a new dependency) — verified by manual syntax review against the same
+shape conventions (`([...])` stadium, `[(...)]` cylinder, `{...}` decision,
+`[[...]]` subroutine) already proven to render in this codebase via
+`convert_ascii_to_mermaid.py`. Worth a live spot-check in the frontend once
+lessons are seeded into a real DB.
+
+---
+
+## 2026-07-29 — Dev DB moved off local SQLite onto hosted Neon Postgres
+
+Directly caused by the empty-database incident above (also independently
+hit by another session, per its own note that "this checkout's local
+SQLite has 0 roadmap rows"): local dev's SQLite file went from 76 published
+roadmap lessons to zero rows in every table, with the cause never
+confirmed. Full incident writeup, timeline, and the "what did and didn't
+cause it" reasoning: `docs/INCIDENTS.md` #1 — logged there instead of here
+because it's a *pitfall*, not a *build*, and deserves its own scannable file
+going forward (also new this session, see below).
+
+### 1. Neon setup — branch-per-dev, not a shared DB
+
+DECISION (Satyam): Neon project `SystemSim`, `production` as the default
+branch, a `dev` branch (child of `production`) for local work. WHY
+branch-per-dev over one shared connection string: local testing (a bad
+script, a wipe-and-reseed) can't touch whatever `production` ends up
+holding once this deploys, and Neon branches are cheap/instant to create
+from a parent's data + schema if a reset is ever wanted. Caught one gotcha
+before it repeated the exact incident above: **Neon free-tier child
+branches auto-delete after 24 hours by default** — the `dev` branch's own
+overview page said so before any schema work started. Disabled via "Edit
+Expiration" — see `docs/INCIDENTS.md` #4.
+
+### 2. Migration order matters on a brand-new database
+
+Ran `alembic upgrade head` against the fresh Neon `dev` branch *before*
+anything else touched it (before ever running `uvicorn main:app` against
+it). This matters because `main.py`'s `Base.metadata.create_all` runs on
+every app startup and would otherwise create all tables directly — which
+works, but never stamps `alembic_version`, so the very next
+`alembic upgrade` fails trying to re-create tables that already exist
+(same failure mode as `docs/INCIDENTS.md` #6, already hit once before on
+this project). Alembic doesn't read `.env` on its own — `alembic/env.py`
+does `os.environ["DATABASE_URL"]` directly — so this needs the var exported
+into the shell first (`export DATABASE_URL=$(grep ... .env)`) when running
+`alembic` by hand outside the app.
+
+All three existing migrations (initial schema, `rag_chunks`, `ai_messages`)
+applied cleanly against real Postgres on the first try — the earlier
+worry logged in `docs/RAG.md`/BACKEND_LOG 2026-07-28 ("migrations still
+untested against real Postgres, no Docker in this environment") is now
+resolved; `psycopg2-binary` was already in `requirements.txt` and the
+`sa.JSON()` columns map fine to Postgres's native JSON type.
+
+### 3. Recovering content without re-spending AI quota twice
+
+A `roadmap_ingest` batch happened to already be running against the local
+SQLite file when the Neon decision landed (re-filling the 76 lessons after
+the empty-DB incident). Rather than restart it against Neon from zero and
+burn Groq quota twice for identical content, wrote
+`scripts/copy_roadmap_to_neon.py` — copies `roadmap_lessons` rows from the
+local SQLite file into Neon, upserting by `day` (idempotent, matches the
+ingest pipeline's own pattern), so it's safe to re-run as more days finish
+locally. **First run silently did nothing to Neon** — the script forgot
+`load_dotenv()` before importing `db.session`, so `DATABASE_URL` wasn't in
+the process environment and it silently fell back to SQLite, re-copying 11
+rows into the same file they came from. No error, no crash — just the
+wrong target. Fixed by adding the same `load_dotenv()` call
+`services/roadmap_ingest.py` already has, for exactly this reason. Full
+gotcha writeup: `docs/INCIDENTS.md` #3.
+
+Once `.env`'s `DATABASE_URL` pointed at Neon, no more copying was needed —
+`services.roadmap_ingest` writes directly there like any other DB-touching
+script. The original SQLite background batch had also died silently by
+this point (no process, no final log line — see `docs/INCIDENTS.md` #2 for
+the `nohup ... & disown` fix that made the resumed batch survive), so the
+remaining ~65 days were re-launched directly against Neon rather than
+resumed against SQLite.
+
+### 4. New file: `docs/INCIDENTS.md`
+
+Also added this session: a dedicated, append-only "what broke and what to
+know" file, separate from this design-log. WHY separate: this log is
+organized by *feature built*, which makes "have I hit this exact gotcha
+before?" a full-file search; `docs/INCIDENTS.md` is organized by *pitfall*,
+with a one-line quick-reference table at the top. Cross-references both
+ways rather than duplicating — this entry points there for incident detail,
+it points back here for the small number of gotchas already fully written
+up elsewhere (the Alembic stamp/upgrade race, SQLite's tzinfo drop).
+
+### Open items
+
+- [ ] Roadmap ingest against Neon was still running as of this writing
+      (~34/76 done, climbing) — same daily Groq quota wall as 2026-07-27 is
+      possible; resuming is a no-op either way (idempotent per-`day` upsert)
+- [ ] `scripts/attach_diagrams.py` (5 hand-authored Mermaid diagrams) hasn't
+      been re-run against the fresh Neon rows yet — needed once ingest
+      finishes, for days 13/28/45/64/72
+- [ ] `rag_chunks` needs a full rebuild against Neon once roadmap ingest
+      finishes (`python -m services.rag_index build`) — currently empty
+      there, so the mentor/chat have nothing to retrieve
+- [ ] `users`/`designs`/`challenge_attempts` are empty on Neon (nothing to
+      recover — real account data with no other source of truth)
+- [ ] Google OAuth as an additional (not replacement) sign-in option — real
+      decision made this session, deferred pending its own Google Cloud
+      OAuth app setup; see CLAUDE.md
+- [ ] Fly.io deploy itself deliberately not started this session (database
+      work only, per explicit instruction) — `fly.toml`/`Dockerfile` exist
+      and are ready whenever that's next
+- [ ] Rate limiting on `/ai/*` before public deploy (carried over, several
+      entries running)
+- [ ] **Days 41-53 (13 lessons) were generated by Groq/llama-3.3-70b while
+      both Gemini and qwen were simultaneously exhausted, before the
+      provider chain was reordered to prefer qwen.** Measurably thinner
+      than qwen/Gemini output (~2-4k chars vs ~5.3-5.9k, fewer takeaways,
+      Mermaid only ~50% of the time vs ~85%) — published and functional,
+      not broken, just below the quality bar the rest of the roadmap hits.
+      Regenerate with `python -m services.roadmap_ingest --days 41-53
+      --publish` once qwen/Gemini have headroom (upsert is idempotent by
+      `day`, so this is a plain overwrite, no cleanup needed first).

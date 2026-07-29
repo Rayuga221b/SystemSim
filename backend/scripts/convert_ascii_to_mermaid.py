@@ -10,12 +10,19 @@ Run:  python -m scripts.convert_ascii_to_mermaid
 """
 from __future__ import annotations
 
-import re
+from dotenv import load_dotenv
 
-from sqlalchemy import select
+# Standalone script — see docs/INCIDENTS.md #3: without this, DATABASE_URL
+# (Neon) isn't visible and db.session silently falls back to empty local
+# SQLite instead of erroring. Must precede the db.session import.
+load_dotenv()
 
-from db.session import SessionLocal
-from models.roadmap_lesson import RoadmapLesson
+import re  # noqa: E402
+
+from sqlalchemy import select  # noqa: E402
+
+from db.session import SessionLocal  # noqa: E402
+from models.roadmap_lesson import RoadmapLesson  # noqa: E402
 
 # day -> replacement mermaid fenced block (authored to match each lesson's flow)
 MERMAID: dict[int, str] = {

@@ -4,7 +4,7 @@ Pipeline (same copyright-safe principle as case studies, project decision
 "AI-structured summaries, never raw scraped HTML"):
 
     fetch source .md (reference only, never stored/served)
-        -> Claude restructures into an ORIGINAL lesson (our voice, our order)
+        -> model restructures into an ORIGINAL lesson (our voice, our order)
         -> upsert into roadmap_lessons
 
 The source series is used strictly as reference material for a transformation.
@@ -14,8 +14,14 @@ restructured result is persisted. Run:
     python -m services.roadmap_ingest --days 1-7 --publish
     python -m services.roadmap_ingest --all           # dry transform, unpublished
 
-Requires GROQ_API_KEY (degrades to AIUnavailable otherwise, exactly like the
-other AI features). Model: GROQ_INGEST_MODEL (default qwen/qwen3.6-27b).
+DECISION (2026-07-29, Satyam's call): generation is a three-tier provider
+CHAIN — Gemini -> Groq/qwen -> Groq/llama-3.3-70b — same pattern already
+used by the mentor (docs/RAG.md). Ordered by measured quality, not
+convenience: a live comparison the same day showed llama (added as a
+fallback because Groq rate-limits per MODEL, so it's a separate quota pool
+from qwen) writes noticeably thinner lessons than qwen on this exact
+prompt — demoted to last resort rather than dropped. Requires at least one
+of GEMINI_API_KEY / GROQ_API_KEY.
 """
 from __future__ import annotations
 
@@ -37,10 +43,15 @@ from sqlalchemy import select  # noqa: E402
 
 from db.session import SessionLocal
 from models.roadmap_lesson import RoadmapLesson
-# Groq provider (DECISION 2026-07-26: ingest runs on qwen/qwen3.6-27b via
-# Groq — the key with quota; supersedes the 2026-07-16 Gemini note. See
-# BACKEND_LOG.md).
-from services.groq import GROQ_INGEST_MODEL, AIUnavailable, generate_json
+# Provider chain (DECISION 2026-07-29): Gemini -> Groq/qwen -> Groq/llama,
+# ordered by measured output quality (llama is last resort, not second
+# choice — see transform()'s docstring). Supersedes the 2026-07-26
+# Groq-only note. See BACKEND_LOG.md.
+from services.gemini import AIUnavailable as GeminiUnavailable
+from services.gemini import generate_json as gemini_generate_json
+from services.groq import AIUnavailable as GroqUnavailable
+from services.groq import GROQ_INGEST_MODEL, GROQ_MODEL
+from services.groq import generate_json as groq_generate_json
 from services.roadmap import curriculum, module_of
 
 # Source repo — reference input only. Overridable so the source can move or be
@@ -150,12 +161,12 @@ _SCHEMA = {
 }
 
 
-# Groq free tier enforces a per-minute token cap (8k/min for qwen) checked at
-# request time against prompt + max_completion_tokens (HTTP 413 — never
-# retryable). Budget both sides of the request: truncate the reference when it
-# is oversized (it's raw material for a rewrite, not the product) and give the
-# rest of the budget to the output. Estimates use a conservative 3 chars/token.
-_TPM_BUDGET = 7600
+# Groq free tier enforces a per-minute token cap (per MODEL — llama's and
+# qwen's are separate pools, checked at request time against
+# prompt + max_completion_tokens; HTTP 413 if exceeded, never retryable).
+# Budget both sides of the request per model: truncate the reference when
+# oversized (it's raw material for a rewrite, not the product) and give the
+# rest to the output. Estimates use a conservative 3 chars/token.
 _MIN_OUTPUT_TOKENS = 2800
 
 
@@ -163,28 +174,62 @@ def _est_tokens(text: str) -> int:
     return max(1, len(text) // 3)
 
 
-def transform(day: int, source_md: str) -> dict[str, Any]:
-    """Reference article -> original structured lesson (via Groq/qwen)."""
-    # ~400 tokens covers the injected response schema + message framing.
-    overhead = _est_tokens(_SYSTEM) + 400
-    max_source_chars = (_TPM_BUDGET - _MIN_OUTPUT_TOKENS - overhead) * 3
+def _groq_transform(day: int, source_md: str, *, model: str, tpm_budget: int,
+                     reasoning_effort: str | None) -> str:
+    """One Groq model's attempt, budgeted to its own TPM cap."""
+    overhead = _est_tokens(_SYSTEM) + 400  # covers the injected schema + framing
+    max_source_chars = (tpm_budget - _MIN_OUTPUT_TOKENS - overhead) * 3
     source = source_md
     if len(source) > max_source_chars:
         cut = source.rfind("\n", 0, max_source_chars)
         source = source[:cut if cut > 0 else max_source_chars]
         source += "\n\n[reference truncated to fit the model's context budget]"
     user = f"Reference article (Day {day}) — raw material only:\n\n{source}"
-    max_out = min(8192, _TPM_BUDGET - overhead - _est_tokens(user))
-    text = generate_json(
-        _SYSTEM,
-        user,
-        model=GROQ_INGEST_MODEL,
-        max_tokens=max_out,
-        response_schema=_SCHEMA,
-        # No thinking: the 8k/min cap leaves no budget for reasoning tokens,
-        # and truncated thinking fails Groq's JSON-mode validation outright.
-        reasoning_effort="none",
+    max_out = min(8192, tpm_budget - overhead - _est_tokens(user))
+    return groq_generate_json(
+        _SYSTEM, user, model=model, max_tokens=max_out,
+        response_schema=_SCHEMA, reasoning_effort=reasoning_effort,
     )
+
+
+def transform(day: int, source_md: str) -> dict[str, Any]:
+    """Reference article -> original structured lesson. Three-tier chain:
+
+    1. Gemini — generous context window, no source truncation needed,
+       generally the stronger writer for this.
+    2. Groq/llama-3.3-70b — a large general-purpose model, not a reasoning
+       model (no `reasoning_effort`); 12k TPM budget.
+    3. Groq/llama-3.3-70b — last resort, not second choice: live comparison
+       against qwen-era lessons (2026-07-29) showed llama writes noticeably
+       thinner output on this prompt — ~2-4k chars vs qwen's ~5.3-5.9k,
+       fewer takeaways, Mermaid diagrams only ~50% of the time vs qwen's
+       ~85%. Demoted below qwen for that reason; kept as a real fallback
+       (not dropped) because it's still better than a batch stalling
+       outright, and it's a genuinely separate Groq rate-limit pool from
+       qwen — useful exactly when qwen alone is exhausted.
+
+    Each tier is only reached when the previous raises AIUnavailable (quota,
+    overload, or no key).
+    """
+    user = f"Reference article (Day {day}) — raw material only:\n\n{source_md}"
+    try:
+        text = gemini_generate_json(
+            _SYSTEM, user, max_tokens=16384, response_schema=_SCHEMA,
+        )
+    except GeminiUnavailable as e:
+        print(f"    [gemini unavailable, trying groq/qwen] {e}", flush=True)
+        try:
+            text = _groq_transform(
+                day, source_md, model=GROQ_INGEST_MODEL, tpm_budget=7600,
+                reasoning_effort="none",
+            )
+        except GroqUnavailable as e2:
+            print(f"    [groq/qwen unavailable, falling back to groq/llama] {e2}",
+                  flush=True)
+            text = _groq_transform(
+                day, source_md, model=GROQ_MODEL, tpm_budget=11400,
+                reasoning_effort=None,
+            )
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text).strip()
     return json.loads(text)
 
@@ -243,7 +288,15 @@ def ingest_days(days: list[int], publish: bool = False) -> None:
                 print(f"  [ok] day {day}: {lesson.slug} "
                       f"({'published' if lesson.published else 'draft'})")
             except Exception as e:  # noqa: BLE001 — batch must survive one failure
-                db.rollback()
+                try:
+                    db.rollback()
+                except Exception:  # noqa: BLE001 — a dead connection can make
+                    # rollback() itself raise; pool_pre_ping (db/session.py)
+                    # should prevent this, but a batch this expensive to redo
+                    # gets a second layer: get a fresh session rather than let
+                    # an already-caught failure crash the whole process.
+                    db.close()
+                    db = SessionLocal()
                 failed.append(day)
                 print(f"  [FAIL] day {day}: {type(e).__name__}: {e}")
     finally:
@@ -276,8 +329,10 @@ def main() -> None:
     days = _parse_days("all" if args.all else args.days)
     try:
         ingest_days(days, publish=args.publish)
-    except AIUnavailable as e:
-        raise SystemExit(f"AI unavailable: {e}. Set GROQ_API_KEY to run ingestion.")
+    except (GeminiUnavailable, GroqUnavailable) as e:
+        raise SystemExit(
+            f"AI unavailable: {e}. Set GEMINI_API_KEY and/or GROQ_API_KEY to run ingestion."
+        )
 
 
 if __name__ == "__main__":

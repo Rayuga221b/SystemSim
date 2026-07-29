@@ -22,7 +22,7 @@ function LessonRow({ lesson, color }) {
         className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-mono text-[11px] font-semibold"
         style={{ backgroundColor: `${color}1c`, color }}
       >
-        {String(lesson.day).padStart(2, "0")}
+        {String(lesson.number).padStart(2, "0")}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block font-display font-medium text-ink text-[0.92rem] leading-snug truncate">
