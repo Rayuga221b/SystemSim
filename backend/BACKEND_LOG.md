@@ -538,3 +538,194 @@ one-off conversion script).
       cheap regex gate in `transform()` if ingest runs again unattended
 - [ ] Rate limiting on `/ai/*` before public deploy (carried over)
 - [ ] Frontend mentor UI still pending an Anthropic key (carried over)
+
+## 2026-07-28 — Retrofitted Alembic: `alembic/versions/` was empty
+
+`db/session.py` and `main.py` already documented the intent ("Alembic
+migrations apply [to Postgres]... create_all is a no-op on tables that
+already exist") but nobody had ever generated a migration — the local
+SQLite dev DB (`systemsim.db`, 76 published roadmap lessons + empty
+`users`/`designs`) existed purely from `Base.metadata.create_all` at
+startup. Schema changes since day one had no version history, which is
+fine solo but breaks the moment a second environment (Postgres, a
+teammate, CI) needs the same schema.
+
+**Fix — no Docker available in this environment, so autogenerate ran
+against a throwaway empty SQLite file instead of the intended Postgres
+target.** This works because Alembic's autogenerate diffs the live DB
+against `Base.metadata`, not against a specific dialect — pointing it at
+an empty DB just makes the diff "everything is new," which is exactly the
+initial migration. Steps:
+
+1. `mkdir alembic/versions` (never existed)
+2. `DATABASE_URL=sqlite:////tmp/... alembic revision --autogenerate -m "initial schema"`
+   against an empty file → `4a6f17d95c7b_initial_schema.py`, all 4 tables
+   + indexes + FKs, matching the SQLAlchemy models exactly
+3. Verified it applies cleanly: `alembic upgrade head` against a second
+   fresh empty SQLite file → all 4 tables created correctly
+4. **Stamped, not upgraded, the real dev DB**: `DATABASE_URL=sqlite:///./systemsim.db
+   alembic stamp head`. This records "you're at head" in a new
+   `alembic_version` table without touching existing rows — the tables
+   already existed via `create_all`, so running `upgrade` would have
+   tried (and failed) to `CREATE TABLE` things that were already there.
+   Confirmed after: still 76 rows in `roadmap_lessons`, untouched.
+
+**Talking point:** the standard move for retrofitting migrations onto a
+DB that predates them is autogenerate-from-empty (to get the migration
+file) + `stamp` (to align an already-correct live DB with it), never
+`upgrade` on a DB that already has the schema. `create_all` stays in
+`main.py` for the zero-infra SQLite path (harmless no-op once tables
+exist); Alembic is now the actual source of truth for schema evolution
+against Postgres.
+
+Still open, deliberately not done here: this environment has no Docker,
+so the migration was never dry-run against real Postgres — only SQLite.
+Postgres and SQLite diverge on some types (JSON, timezone-aware
+DateTime); worth an `alembic upgrade head` against the docker-compose
+Postgres before this is trusted for a real deploy.
+
+## 2026-07-28 — RAG: the mentor now retrieves and cites platform content
+
+Full architecture + tradeoffs: `docs/RAG.md` (written interview-first;
+read that before this entry). This entry logs what was BUILT and the two
+operational lessons from the day.
+
+New pieces: `models/rag_chunk.py` (+ migration `fccb348abe62`),
+`services/embeddings.py` (Gemini `gemini-embedding-001`, 768-dim, task-type
+aware, retryDelay-honoring backoff), `services/rag.py` (heading-aware
+chunker + exact numpy cosine over an in-process cached matrix),
+`services/rag_index.py` (idempotent content-hash-diffed build CLI),
+`services/mentor.py` (orchestration: retrieve → prompt → Claude→Groq chain
+→ server-assembled citations). `routes/ai.py` mentor response is now
+`{answer, grounded, provider, sources[]}`. Frontend renders "Grounded in"
+citation chips that deep-link via chunk anchors. Tests: 9 new (chunker
+boundaries/overlap/fence-safety, ranking, per-source cap, exclude-current,
+empty-index short-circuit, mentor contract + degradation) — suite at 60.
+
+Lesson 1 — **read the provider's retry hint instead of guessing.** The
+first index build died on Gemini 429s: blind exponential backoff (3s/6s/
+12s) burned all retries inside one per-minute quota window. Gemini 429
+bodies carry `RetryInfo.retryDelay` ("39s") — honoring it plus 2s batch
+pacing made the same build complete. Same family of lesson as the Groq
+`retry-after` handling (2026-07-26), different provider spelling.
+
+Lesson 2 — **`--reload` dev servers race your migrations.** The running
+uvicorn re-imported main.py the moment the model file landed and
+`create_all`'d `rag_chunks` before `alembic upgrade` ran — so upgrade
+failed on "table already exists" and the right move was `alembic stamp`,
+not a retry. Rule of thumb recorded: with a reloading dev server up,
+adding a model means the table may already exist by the time you migrate;
+stamp is the reconciliation tool (second time today it earned its keep).
+
+Deliberately NOT built (judgment, logged for interviews): no vector DB
+(~550 chunks = 1.7 MB matrix, exact search < 1 ms — pgvector documented as
+the ~50k-chunk upgrade behind the `rag.retrieve()` seam), no retrieval
+eval set yet (named as the honest gap in docs/RAG.md — threshold tweaks
+are currently judgment, not measurement), no rate limiting (still the
+top pre-deploy TODO, now covering one more expensive endpoint).
+
+## 2026-07-29 — Two RAG bugs fixed, general fallback, floating global chat
+
+Full architecture + every tradeoff: `docs/RAG.md` §3.5, §4 (updated same
+day). This entry is the build log: what changed, in what order, and the
+two more operational lessons the day produced.
+
+### 1. Two bugs, found by live-testing the mentor before building on it
+
+Before adding surface area, tried to break what shipped 2026-07-28.
+
+- **Citations decorating answers that never used them.** Asked the mentor
+  "what's your favorite pizza topping?" It correctly redirected — but
+  `sources` still came back with 4 chips at ~0.52 cosine (barely over the
+  0.45 floor: noise-level similarity for generic English against any
+  corpus). The model ignored all four; the API returned them anyway because
+  `sources` reflected *what retrieval found*, not *what the answer used*.
+  Fix: `mentor._cited_sources()` now regexes the generated text for `[S#]`
+  and keeps only chunks actually referenced; `grounded` derives from that,
+  not from `bool(chunks)`. Deliberately not a threshold fix — "did the model
+  use it" is a better question than any score cutoff, because it doesn't
+  require guessing right about relevance in advance.
+- **Boilerplate outranking real content.** A citation chip read "Day 54 ›
+  Try it in the sandbox" — checked the DB, that section is the generic
+  "build this yourself" CTA every lesson ends with (per the ingest prompt).
+  Fixed at the source: `chunk_markdown()` skips any section whose heading
+  starts with that phrase. Rebuilding the index (`rag_index.py build`)
+  dropped 547 → 499 chunks with **zero embedding calls** — pure deletions,
+  exactly the case the diff-based build (2026-07-28) was designed for.
+
+Both fixes are logged in `tests/test_rag.py` as regression tests, not just
+prose — `test_mentor_drops_retrieved_but_uncited_sources` and
+`test_chunker_excludes_the_sandbox_cta_boilerplate`.
+
+### 2. Prompt rework: platform-first, general knowledge as a labeled fallback
+
+Satyam's ask: let the assistant answer general questions, but strictly only
+when the platform corpus has nothing relevant — "mostly use the embeddings."
+Rewrote `mentor._SYSTEM` with an explicit PRIORITY ORDER (context → platform
+passages → general knowledge, last, clearly labeled). This is a deliberate,
+narrow carve-out from CLAUDE.md's "no open-ended chat" rule, called out as
+such in both CLAUDE.md and RAG.md — retrieval still runs on every question;
+the fallback only fires when steps 1–2 find nothing. Verified live: "explain
+CAP theorem in general" on the Discord mentor produced *"Outside SystemSim's
+own content, but generally speaking..."* instead of the old bare redirect.
+
+### 3. The floating global assistant — one core, three context modes, auth-gated
+
+`mentor.answer()` (case-study-only) generalized into `mentor.respond()`,
+taking `case_study` xor `sandbox` xor neither. New `services/chat.py` layers
+persistence and rate limiting on top for the new surface
+(`POST /ai/chat`, `GET /ai/chat/history`, both `get_current_user`-gated) —
+`/ai/mentor`'s contract and tests were untouched by the refactor.
+
+`FloatingChat.jsx` mounts once in `App.jsx` (survives route changes) and
+infers context from `useLocation()` + the Zustand stores: case-study slug on
+`/case-studies/:slug`, `serializeGraph()` + `simResult` on `/sandbox`,
+general elsewhere. Auth-gated on purpose — not cosmetic: `services/chat.py`
+rate-limits by `SELECT COUNT(*)` over `ai_messages` per `user_id` (20
+msgs/10 min), and that only works because every message has an owner. No
+Redis; a plain indexed query is faster than the LLM call it's protecting at
+this scale, same "no vector DB" reasoning as 2026-07-28.
+
+New table `ai_messages` (migration `255eb0fe9155`) — auth-gated by design so
+persisted history and the rate limit both have a `user_id` to attach to.
+
+### 4. Two more operational lessons
+
+- **SQLite silently drops tzinfo on read even from `DateTime(timezone=True)`
+  columns.** `_check_rate_limit()`'s retry-after math crashed
+  (`can't subtract offset-naive and offset-aware datetimes`) — the write was
+  correct (UTC), the read back came naive. Postgres round-trips this
+  correctly; SQLite doesn't. Normalized with `.replace(tzinfo=timezone.utc)`
+  before subtracting. Worth remembering anywhere else this schema's
+  timestamps get arithmetic done on them, given SQLite-dev/Postgres-prod is
+  this project's whole persistence story.
+- **A `--reload` dev server plus a splash screen combine into flaky manual
+  QA, not a product bug.** Chasing down what looked like a broken
+  entrance/exit animation on `FloatingChat` (frozen at partial opacity) led
+  to a real, if minor, pre-existing issue: `SplashLoader`'s full-screen
+  overlay animates opacity but never sets `pointer-events: none`, so it
+  keeps swallowing clicks on the real UI underneath for its ~450ms fade-out
+  — every navigation in this session's testing landed inside that window.
+  One-line fix (`frontend/.../SplashLoader.jsx`): the overlay has no
+  interactive elements of its own, so it never needed to capture pointer
+  events at all. Unrelated to RAG, found only because live UI testing
+  surfaces things unit tests structurally cannot.
+
+### Final state
+
+70/70 backend tests passing (was 60 at the top of this session — 9 from
+2026-07-28's RAG work, 1 renamed, 10 new: chunker boilerplate exclusion,
+citation-filtering, and the full `/ai/chat` surface). Frontend: `FloatingChat`
+verified live in all three context modes (case study, sandbox, general),
+history reload-and-refetch verified across a hard page reload.
+
+### Open items
+
+- [ ] Retrieval evaluation set (carried over) — the honest gap; threshold
+      and chunking changes are still judgment, not measurement
+- [ ] `/ai/explain` still has no rate limit — no auth requirement to hang
+      one on yet; `/ai/mentor` and `/ai/chat` are now covered
+- [ ] Migrations still untested against real Postgres (carried over, no
+      Docker in this environment)
+- [ ] Frontend mentor UI still pending a real `ANTHROPIC_API_KEY` to
+      prefer Claude in practice (currently every live answer is Groq)

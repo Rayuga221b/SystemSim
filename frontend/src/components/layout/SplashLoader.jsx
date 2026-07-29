@@ -23,7 +23,11 @@ export default function SplashLoader({ children }) {
         {visible && (
           <motion.div
             key="splash"
-            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-8 select-none"
+            // pointer-events-none: opacity animating to 0 doesn't stop the element
+            // from capturing clicks — without this, real UI underneath is dead
+            // for the whole fade-out (verified: a fixed z-[9999] div was still
+            // eating clicks on the app's real buttons during that window).
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-8 select-none pointer-events-none"
             style={{ backgroundColor: "#09090E" }}
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: FADE_OUT_S, ease: "easeOut" } }}

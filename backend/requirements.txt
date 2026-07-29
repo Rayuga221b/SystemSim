@@ -7,6 +7,11 @@ beautifulsoup4==4.12.3
 httpx==0.27.2
 anthropic==0.39.0
 
+# RAG retrieval (services/rag.py) — exact cosine over the in-process chunk
+# matrix. numpy is deliberate: at ~400 chunks brute-force beats any vector DB
+# on both latency and ops cost; see docs/RAG.md "Why no vector database".
+numpy>=1.26
+
 # database
 sqlalchemy==2.0.36
 alembic==1.13.3
