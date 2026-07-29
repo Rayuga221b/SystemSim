@@ -4,7 +4,7 @@ Pipeline (same copyright-safe principle as case studies, project decision
 "AI-structured summaries, never raw scraped HTML"):
 
     fetch source .md (reference only, never stored/served)
-        -> Claude restructures into an ORIGINAL lesson (our voice, our order)
+        -> model restructures into an ORIGINAL lesson (our voice, our order)
         -> upsert into roadmap_lessons
 
 The source series is used strictly as reference material for a transformation.
@@ -14,8 +14,12 @@ restructured result is persisted. Run:
     python -m services.roadmap_ingest --days 1-7 --publish
     python -m services.roadmap_ingest --all           # dry transform, unpublished
 
-Requires GROQ_API_KEY (degrades to AIUnavailable otherwise, exactly like the
-other AI features). Model: GROQ_INGEST_MODEL (default qwen/qwen3.6-27b).
+DECISION (2026-07-29, Satyam's call): generation is a provider CHAIN,
+Gemini -> Groq/qwen — same pattern already used by the mentor
+(docs/RAG.md). Gemini goes first for quality (Groq/qwen is the tighter,
+quota-constrained fallback, not the preferred model); Groq only kicks in
+when Gemini raises `AIUnavailable` for any reason (quota, overload, no
+key). Requires at least one of GEMINI_API_KEY / GROQ_API_KEY.
 """
 from __future__ import annotations
 
@@ -37,10 +41,14 @@ from sqlalchemy import select  # noqa: E402
 
 from db.session import SessionLocal
 from models.roadmap_lesson import RoadmapLesson
-# Groq provider (DECISION 2026-07-26: ingest runs on qwen/qwen3.6-27b via
-# Groq — the key with quota; supersedes the 2026-07-16 Gemini note. See
-# BACKEND_LOG.md).
-from services.groq import GROQ_INGEST_MODEL, AIUnavailable, generate_json
+# Provider chain (DECISION 2026-07-29): Gemini first for quality, falling
+# back to Groq/qwen — supersedes the 2026-07-26 Groq-only note. See
+# BACKEND_LOG.md.
+from services.gemini import AIUnavailable as GeminiUnavailable
+from services.gemini import generate_json as gemini_generate_json
+from services.groq import AIUnavailable as GroqUnavailable
+from services.groq import GROQ_INGEST_MODEL
+from services.groq import generate_json as groq_generate_json
 from services.roadmap import curriculum, module_of
 
 # Source repo — reference input only. Overridable so the source can move or be
@@ -163,8 +171,9 @@ def _est_tokens(text: str) -> int:
     return max(1, len(text) // 3)
 
 
-def transform(day: int, source_md: str) -> dict[str, Any]:
-    """Reference article -> original structured lesson (via Groq/qwen)."""
+def _groq_transform(day: int, source_md: str) -> str:
+    """The Groq/qwen fallback path — tight free-tier budgeting, unchanged
+    from the Groq-only era. Only reached when Gemini is unavailable."""
     # ~400 tokens covers the injected response schema + message framing.
     overhead = _est_tokens(_SYSTEM) + 400
     max_source_chars = (_TPM_BUDGET - _MIN_OUTPUT_TOKENS - overhead) * 3
@@ -175,7 +184,7 @@ def transform(day: int, source_md: str) -> dict[str, Any]:
         source += "\n\n[reference truncated to fit the model's context budget]"
     user = f"Reference article (Day {day}) — raw material only:\n\n{source}"
     max_out = min(8192, _TPM_BUDGET - overhead - _est_tokens(user))
-    text = generate_json(
+    return groq_generate_json(
         _SYSTEM,
         user,
         model=GROQ_INGEST_MODEL,
@@ -185,6 +194,22 @@ def transform(day: int, source_md: str) -> dict[str, Any]:
         # and truncated thinking fails Groq's JSON-mode validation outright.
         reasoning_effort="none",
     )
+
+
+def transform(day: int, source_md: str) -> dict[str, Any]:
+    """Reference article -> original structured lesson. Tries Gemini first
+    (generous context window, no source truncation needed, generally the
+    stronger writer for this); falls back to Groq/qwen — with its tighter
+    free-tier budgeting — only when Gemini raises AIUnavailable (quota,
+    overload, or no key configured)."""
+    user = f"Reference article (Day {day}) — raw material only:\n\n{source_md}"
+    try:
+        text = gemini_generate_json(
+            _SYSTEM, user, max_tokens=16384, response_schema=_SCHEMA,
+        )
+    except GeminiUnavailable as e:
+        print(f"    [gemini unavailable, falling back to groq] {e}", flush=True)
+        text = _groq_transform(day, source_md)
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text).strip()
     return json.loads(text)
 
@@ -276,8 +301,10 @@ def main() -> None:
     days = _parse_days("all" if args.all else args.days)
     try:
         ingest_days(days, publish=args.publish)
-    except AIUnavailable as e:
-        raise SystemExit(f"AI unavailable: {e}. Set GROQ_API_KEY to run ingestion.")
+    except (GeminiUnavailable, GroqUnavailable) as e:
+        raise SystemExit(
+            f"AI unavailable: {e}. Set GEMINI_API_KEY and/or GROQ_API_KEY to run ingestion."
+        )
 
 
 if __name__ == "__main__":
