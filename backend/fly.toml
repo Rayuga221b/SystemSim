@@ -1,0 +1,24 @@
+# Fly.io app config. Create the app first with `fly launch --no-deploy`
+# (it'll offer to generate this file — replace it with this one), or
+# `fly apps create systemsim-api` then `fly deploy` using this file directly.
+app = "systemsim-api"
+primary_region = "iad"
+
+[build]
+
+[env]
+  ENVIRONMENT = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[deploy]
+  release_command = "alembic upgrade head"
