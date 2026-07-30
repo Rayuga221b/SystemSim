@@ -1,15 +1,16 @@
-# Deployment — Cloud Run (backend) + Vercel (frontend)
+# Deployment — Cloud Run (backend) + Cloudflare Pages (frontend)
 
 DECISION (2026-07-30): backend hosts on **Google Cloud Run**, frontend on
-**Vercel**, DB stays on Neon (already true in dev — see CLAUDE.md). The CI
-pipeline (`.github/workflows/deploy-backend.yml`) already exists and does
-build → migrate → deploy on every push to `main` that touches `backend/**`.
-This doc is the one-time GCP setup that pipeline assumes exists, plus the
-Vercel side, written for a from-scratch GCP account (no project yet).
+**Cloudflare Pages**, DB stays on Neon (already true in dev — see
+CLAUDE.md). The CI pipeline (`.github/workflows/deploy-backend.yml`)
+already exists and does build → migrate → deploy on every push to `main`
+that touches `backend/**`. This doc is the one-time GCP setup that pipeline
+assumes exists, plus the Cloudflare Pages side, written for a from-scratch
+GCP account (no project yet) and no Cloudflare account set up yet either.
 
-Do these in order — Vercel needs the Cloud Run URL, and Cloud Run's CORS
-needs the Vercel URL, so there's one unavoidable "come back and fix CORS"
-step near the end.
+Do these in order — Cloudflare Pages needs the Cloud Run URL, and Cloud
+Run's CORS needs the Cloudflare Pages URL, so there's one unavoidable "come
+back and fix CORS" step near the end.
 
 ---
 
@@ -130,30 +131,50 @@ Sanity check:
 curl https://YOUR-CLOUD-RUN-URL/health
 ```
 
-## 7. Frontend on Vercel
+## 7. Frontend on Cloudflare Pages
 
-1. Import the repo in Vercel, set **Root Directory** to `frontend`.
-2. Framework preset: Vite (auto-detected).
-3. Add env var `VITE_API_URL` = the Cloud Run URL from step 6.
-4. Deploy. `frontend/vercel.json` (added in this branch) handles the SPA
-   rewrite so client-side routes (e.g. `/roadmap/some-lesson`) don't 404 on
-   a hard refresh — this is the #1 thing people forget with React Router +
-   Vercel and a Vite project.
+Native git integration — no GitHub Actions workflow, no Cloudflare API
+token needed for this path:
+
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages**
+   → **Create** → **Pages** → **Connect to Git** → authorize GitHub → pick
+   this repo.
+2. Build settings:
+   - **Root directory**: `frontend`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+   - **Framework preset**: Vite (if offered — otherwise leave as above)
+3. **Environment variables** (same screen, or Settings → Environment
+   variables after creation): `VITE_API_URL` = the Cloud Run URL from step
+   6. Set it for both **Production** and **Preview** if you want preview
+   deploys to hit the real API too.
+4. Deploy. `frontend/public/_redirects` (added in this branch, contents
+   `/* /index.html 200`) handles the SPA fallback so client-side routes
+   (e.g. `/roadmap/some-lesson`) don't 404 on a hard refresh — Cloudflare
+   Pages copies anything in `public/` to the build output root, so this
+   file ships automatically with every build. This is the #1 thing people
+   forget with React Router + a static host.
+
+Your app will be live at `https://<project-name>.pages.dev` immediately;
+add a custom domain later under the same Pages project if you want one.
 
 ## 8. Close the CORS loop
 
-Now that you have the real Vercel URL, update the `CORS_ORIGINS` GitHub
-secret to the actual frontend origin (comma-separate if you also want
-previews/localhost, e.g. `https://systemsim.vercel.app,http://localhost:5173`),
-then re-run the backend workflow (push any change under `backend/**`, or
-re-run the last successful Action) so Cloud Run picks it up.
+Now that you have the real Cloudflare Pages URL, update the `CORS_ORIGINS`
+GitHub secret to the actual frontend origin (comma-separate if you also want
+previews/localhost, e.g.
+`https://systemsim.pages.dev,http://localhost:5173` — Cloudflare Pages
+preview deploys get their own subdomain per branch/PR, so add those too if
+you'll test previews against the real API), then re-run the backend
+workflow (push any change under `backend/**`, or re-run the last successful
+Action) so Cloud Run picks it up.
 
 ## 9. Post-deploy smoke test
 
 - `GET /health` → `{"status": "ok"}`
 - Sign up / log in from the deployed frontend (exercises DB + JWT)
 - Open a roadmap lesson, refresh the page directly on that URL (exercises
-  the Vercel SPA rewrite)
+  the Cloudflare Pages `_redirects` fallback)
 - Run a sandbox simulation and click "Explain" (exercises Groq — check Cloud
   Run logs if it's slow; see the timeout note below)
 - Open a case study and ask the mentor a question (exercises Claude + RAG)
@@ -178,9 +199,9 @@ deployment bug — worth a follow-up if it's noticed in practice.
 | Secrets committed to git | Clean — `.env` gitignored, nothing tracked |
 | App silently falls back to local SQLite/dev config in prod | Fixed — `db/session.py` and `services/auth.py` fail hard when `ENVIRONMENT=production` and the real value is missing |
 | Hardcoded `localhost` API URLs in frontend | Clean — all calls go through `VITE_API_URL` in `api/client.js` |
-| CORS misconfigured or wildcarded | Env-driven via `CORS_ORIGINS`, needs the real Vercel URL (step 8) |
+| CORS misconfigured or wildcarded | Env-driven via `CORS_ORIGINS`, needs the real Cloudflare Pages URL (step 8) |
 | Container doesn't respect `$PORT` | Handled — Dockerfile CMD uses `${PORT}`, defaults to 8080 |
-| SPA client-side routes 404 on refresh | Fixed in this branch — `frontend/vercel.json` rewrite |
+| SPA client-side routes 404 on refresh | Fixed in this branch — `frontend/public/_redirects` |
 | Gitignored file the app depends on at runtime | Already bit this project once (`docs/INCIDENTS.md` #8, static roadmap diagrams) — fixed by moving to inline Mermaid, not a live risk anymore |
 | DB connection pool exhaustion against a serverless Postgres | Using Neon's pooled endpoint + `pool_pre_ping=True` already |
 | Migrations not run automatically on deploy | Handled — workflow runs `alembic upgrade head` in a one-off container before deploying |

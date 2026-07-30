@@ -47,18 +47,26 @@ lesson was learned the hard way, more than once.
   `docs/AI_INTEGRATION.md` for the full architecture.
 - Content rendering: `react-markdown` + `remark-gfm` + `rehype-highlight`
   (roadmap lessons), `mermaid` (flowcharts). Long-form only; UI stays on Prose.
-- Hosting: Vercel (frontend), **Google Cloud Run** (backend) — DECISION
-  (2026-07-30, Satyam's call — supersedes the 2026-07-29 Fly.io note below,
-  which was never deployed): `.github/workflows/deploy-backend.yml` builds
-  the `backend/Dockerfile` image, pushes to Artifact Registry, runs
-  `alembic upgrade head` against Neon in a one-off container, then deploys
-  to Cloud Run — triggered on push to `main` touching `backend/**`. WHY the
-  switch: free-tier scale-to-zero fits this project's traffic, and GCP is
-  already in play for embeddings (Gemini). `fly.toml` is kept as a reference,
-  not deleted, but is not what's live — see `docs/DEPLOYMENT.md` for the
-  full GCP setup checklist (Artifact Registry, Secret Manager, service
-  account/IAM, GitHub Actions secrets). DB is Neon (see above), hosted
-  independently of where the backend runs.
+- Hosting: **Cloudflare Pages** (frontend), **Google Cloud Run** (backend) —
+  DECISION (2026-07-30, Satyam's call — supersedes the 2026-07-29 Fly.io note
+  below, which was never deployed, and an earlier same-day "Vercel" draft of
+  this same note that was never acted on): backend —
+  `.github/workflows/deploy-backend.yml` builds the `backend/Dockerfile`
+  image, pushes to Artifact Registry, runs `alembic upgrade head` against
+  Neon in a one-off container, then deploys to Cloud Run — triggered on push
+  to `main` touching `backend/**`. Frontend — Cloudflare Pages, connected
+  directly to the GitHub repo (root directory `frontend`, build `npm run
+  build`, output `dist`), no GitHub Actions workflow needed for it; SPA
+  fallback via `frontend/public/_redirects` (`/* /index.html 200`) since
+  the app uses React Router's `createBrowserRouter`. WHY Cloud Run: free-tier
+  scale-to-zero fits this project's traffic, and GCP is already in play for
+  embeddings (Gemini). WHY Cloudflare Pages: free tier, zero-config git
+  integration, no cold starts for static assets. `fly.toml` is kept as a
+  reference, not deleted, but is not what's live — see `docs/DEPLOYMENT.md`
+  for the full GCP + Cloudflare Pages setup checklist (Artifact Registry,
+  Secret Manager, service account/IAM, GitHub Actions secrets, Cloudflare
+  Pages env vars). DB is Neon (see above), hosted independently of where the
+  backend runs.
   - (superseded) Fly.io note, 2026-07-29: `fly.toml` + `Dockerfile` already
     exist, `release_command = alembic upgrade head` wired for auto-migration
     on deploy. Supersedes the earlier "AWS" plan, which was never acted on.
