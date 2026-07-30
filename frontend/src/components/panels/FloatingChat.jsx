@@ -259,9 +259,10 @@ export default function FloatingChat() {
         className={open
           // Open: compact circular close control, stacked right above the panel.
           ? "w-12 h-12 rounded-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center transition-colors shrink-0"
-          // Closed: a bigger, inviting pill — not just an icon — so the
-          // assistant reads as "ask me something," not a generic chat glyph.
-          : "group flex items-center gap-3 rounded-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:-translate-y-0.5 pl-4 pr-5 py-3 transition-all duration-200"
+          // Closed: a round icon-only bubble on narrow screens (where the full
+          // pill's text would overlap page content), widening into the inviting
+          // "ask me something" pill from `sm` up — same glow either way.
+          : "group flex items-center justify-center sm:justify-start gap-0 sm:gap-3 rounded-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:-translate-y-0.5 w-14 h-14 sm:w-auto sm:h-auto p-0 sm:pl-4 sm:pr-5 sm:py-3 transition-all duration-200"
         }
         aria-label={open ? "Close AI assistant" : "Open AI assistant — ask a question about SystemSim"}
       >
@@ -269,10 +270,10 @@ export default function FloatingChat() {
           <X size={18} />
         ) : (
           <>
-            <span className="flex items-center justify-center w-9 h-9 rounded-full bg-white/15 shrink-0">
+            <span className="flex items-center justify-center w-9 h-9 sm:w-9 sm:h-9 rounded-full bg-white/15 shrink-0">
               <Sparkles size={17} className="group-hover:rotate-12 transition-transform duration-200" aria-hidden />
             </span>
-            <span className="flex flex-col items-start leading-tight text-left">
+            <span className="hidden sm:flex flex-col items-start leading-tight text-left">
               <span className="font-display text-[13.5px] font-semibold">Ask me anything</span>
               <span className="font-sans text-[11px] text-white/75">Curious about something? I've got answers</span>
             </span>
