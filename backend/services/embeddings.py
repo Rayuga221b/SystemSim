@@ -1,13 +1,13 @@
 """Embeddings provider — Gemini `gemini-embedding-001` via REST.
 
 WHY a separate file from services/gemini.py: same isolation rule as every
-other provider in this repo (claude / gemini / groq) — embeddings are their
-own dependency with their own model id, quota, and failure modes, and the
+other provider in this repo (gemini / groq) — embeddings are their own
+dependency with their own model id, quota, and failure modes, and the
 retrieval layer (services/rag.py) must be swappable to another embedding
 provider (OpenAI, Voyage, local) without touching generation code.
 
-WHY Gemini for embeddings when generation runs on Groq/Claude: Groq exposes
-no embeddings endpoint, and the Gemini key is the real, quota-bearing key we
+WHY Gemini for embeddings when generation runs on Groq: Groq exposes no
+embeddings endpoint, and the Gemini key is the real, quota-bearing key we
 hold (DECISION 2026-07-28, docs/RAG.md). Provider choice for embeddings is
 STICKY in a way generation is not: every stored vector is only comparable to
 queries embedded by the same model, so swapping later means re-embedding the

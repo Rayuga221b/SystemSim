@@ -41,7 +41,7 @@ def test_chat_case_study_context_scopes_correctly(client, monkeypatch, auth_head
     captured = {}
     def fake_generate(system, user):
         captured["user"] = user
-        return "About that case study...", "claude"
+        return "About that case study...", "groq"
     monkeypatch.setattr(mentor_svc, "retrieve", lambda db, q, **kw: [])
     monkeypatch.setattr(mentor_svc, "_generate", fake_generate)
 

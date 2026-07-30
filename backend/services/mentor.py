@@ -3,8 +3,7 @@
 Orchestration only; the moving parts live where they belong:
   services/rag.py         retrieval (chunks + scores)
   services/embeddings.py  query embedding (Gemini)
-  services/claude.py      generation, preferred provider
-  services/groq.py        generation, fallback provider
+  services/groq.py        generation (GROQ_MENTOR_MODEL, GROQ_MODEL fallback)
 
 Three callers share this core (DECISION 2026-07-29, extended 2026-07-30 for
 roadmap lessons): the per-case-study mentor widget (`answer()`, still backing
@@ -12,7 +11,7 @@ roadmap lessons): the per-case-study mentor widget (`answer()`, still backing
 also backing `POST /ai/mentor` via `roadmap_slug`), and the global floating
 assistant (`services/chat.py` → `respond()` directly, supporting case_study /
 sandbox / roadmap / contextless "general" modes). Same prompt, same citation
-contract, same provider chain — one place to get the RAG behavior right
+contract, same generation core — one place to get the RAG behavior right
 instead of prompts drifting apart across three surfaces.
 
 DECISION (2026-07-28, docs/RAG.md): two departures from earlier notes, both
@@ -22,7 +21,15 @@ driven by "this deploys live":
    relevant passages from the WHOLE platform corpus (76 roadmap lessons + all
    case studies), not just the current document.
 2. Provider chain Claude → Groq, not Claude-only — a deployed product cannot
-   503 behind a placeholder key.
+   503 behind a placeholder key. (Superseded 2026-07-30 below — Claude is
+   gone, kept here as the historical reason RAG was built chain-tolerant.)
+
+DECISION (2026-07-30, Satyam's call): Anthropic dropped entirely — every AI
+task now runs on Groq (generation) or Gemini (embeddings only), no task uses
+Claude. `services/claude.py` deleted. `_generate` below keeps a two-attempt
+shape (GROQ_MENTOR_MODEL, then GROQ_MODEL) so a single bad/rate-limited
+model id still degrades gracefully instead of 503ing outright — same spirit
+as the old cross-provider chain, just within one provider now.
 
 DECISION (2026-07-29, supersedes CLAUDE.md's "no open-ended chat" for this ONE
 carve-out): the system prompt now allows a bounded general-knowledge fallback
@@ -47,7 +54,8 @@ better final answer than "did it score above X."
 
 FAILURE CONTRACT: retrieval failing (embeddings down, empty index) degrades
 to the pre-RAG behavior — context-only prompt, empty sources. Only generation
-failing on BOTH providers raises AIUnavailable → the caller's 503.
+failing on both Groq attempts (mentor model, then base model) raises
+AIUnavailable → the caller's 503.
 """
 from __future__ import annotations
 
@@ -57,12 +65,13 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from services import claude, groq
+from services import groq
 from services.rag import Retrieved, retrieve
 
 
 class AIUnavailable(Exception):
-    """Neither generation provider is configured/reachable."""
+    """Groq is not configured/reachable (no ANTHROPIC fallback anymore — see
+    DECISION 2026-07-30 below)."""
 
 
 _SYSTEM = (
@@ -132,16 +141,21 @@ def _prompt(question: str, *, case_study: dict[str, Any] | None,
 
 
 def _generate(system: str, user: str) -> tuple[str, str]:
-    """Provider chain: Claude preferred, Groq fallback. Returns (text, provider).
+    """Groq only (DECISION 2026-07-30: Anthropic dropped entirely, no task
+    uses Claude anymore). Returns (text, provider) — provider is always
+    "groq" now; kept in the return shape since callers/tests/the API
+    response still key off it.
 
-    The Claude attempt catches Exception, not just AIUnavailable: a chain
-    exists precisely so the preferred provider failing in ANY way (placeholder
-    key → 401, quota, outage) falls through instead of 500ing the request.
-    Only the LAST provider's failure surfaces.
+    Still a two-attempt chain, just within Groq: GROQ_MENTOR_MODEL first
+    (tunable independently for mentor/chat quality), GROQ_MODEL as a
+    fallback so one bad/rate-limited model id doesn't 503 the assistant
+    outright. Catches Exception broadly on the first attempt for the same
+    reason the old cross-provider chain did — any failure mode (bad model
+    id, quota, outage) should fall through, not just "not configured."
     """
     try:
-        return claude.ask(system, user), "claude"
-    except Exception:  # noqa: BLE001 — fall through to the next provider
+        return groq.generate_text(system, user, model=groq.GROQ_MENTOR_MODEL, max_tokens=700), "groq"
+    except Exception:  # noqa: BLE001 — fall through to the plain GROQ_MODEL
         pass
     try:
         return groq.generate_text(system, user, max_tokens=700), "groq"
@@ -186,7 +200,8 @@ def respond(db: Session, question: str, *, case_study: dict[str, Any] | None = N
       answer    str   — the mentor's reply, may contain inline [S1] tags
       sources   list  — only chunks the answer actually cited (tag order)
       grounded  bool  — whether the answer was actually backed by a citation
-      provider  str   — "claude" | "groq", whichever generated this answer
+      provider  str   — "groq" (kept as a field for response-shape stability;
+                        historically distinguished Claude vs Groq)
     """
     try:
         chunks = retrieve(db, question, exclude_slug=exclude_slug)

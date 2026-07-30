@@ -1,10 +1,12 @@
 """Gemini provider — roadmap ingest pipeline + the simulation explainer.
 
-WHY separate from services/claude.py: providers stay isolated so a swap
+WHY separate from services/groq.py: providers stay isolated so a swap
 touches nothing else. Originally ingest-only; DECISION (2026-07-25) moved the
 in-app simulation explainer here too (services/ai_explain.py) because Gemini
-is the key we actually have. The case-study mentor remains on Claude. Both
-decisions are logged in CLAUDE.md / BACKEND_LOG.md.
+was the key with usable quota at the time — superseded 2026-07-26 by the
+Groq move (see services/groq.py). This file is kept for provider swap-back
+only; not used by default. Anthropic/Claude dropped entirely as of
+2026-07-30 — see CLAUDE.md / BACKEND_LOG.md.
 
 REST via urllib (no new SDK dependency). Model id lives in ONE place: the
 GEMINI_MODEL env var (default below). Set GEMINI_API_KEY in backend/.env.

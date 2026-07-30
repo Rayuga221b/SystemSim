@@ -75,15 +75,16 @@ GitHub secret in step 5, then delete the local file. Don't commit it.
 
 ## 4. Secret Manager — the actual runtime secrets
 
-Create each secret with a real value (replace placeholders):
+Google + Groq only — Anthropic dropped entirely (DECISION 2026-07-30, all
+AI generation runs on Groq, embeddings on Gemini). Create each secret with a
+real value (replace placeholders):
 
 ```bash
 echo -n "postgresql://...@...neon.tech/neondb?sslmode=require" | \
   gcloud secrets create DATABASE_URL --data-file=-
 echo -n "$(openssl rand -hex 32)" | gcloud secrets create JWT_SECRET --data-file=-
-echo -n "your-gemini-key"    | gcloud secrets create GEMINI_API_KEY --data-file=-
-echo -n "your-groq-key"      | gcloud secrets create GROQ_API_KEY --data-file=-
-echo -n "your-anthropic-key" | gcloud secrets create ANTHROPIC_API_KEY --data-file=-
+echo -n "your-gemini-key" | gcloud secrets create GEMINI_API_KEY --data-file=-
+echo -n "your-groq-key"   | gcloud secrets create GROQ_API_KEY --data-file=-
 ```
 
 **Common gotcha:** creating the secret is not enough — Cloud Run reads
@@ -96,7 +97,7 @@ that's the project's compute default SA:
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
 RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
-for secret in DATABASE_URL JWT_SECRET GEMINI_API_KEY GROQ_API_KEY ANTHROPIC_API_KEY; do
+for secret in DATABASE_URL JWT_SECRET GEMINI_API_KEY GROQ_API_KEY; do
   gcloud secrets add-iam-policy-binding "$secret" \
     --member="serviceAccount:${RUNTIME_SA}" --role="roles/secretmanager.secretAccessor"
 done
@@ -177,7 +178,7 @@ Action) so Cloud Run picks it up.
   the Cloudflare Pages `_redirects` fallback)
 - Run a sandbox simulation and click "Explain" (exercises Groq — check Cloud
   Run logs if it's slow; see the timeout note below)
-- Open a case study and ask the mentor a question (exercises Claude + RAG)
+- Open a case study and ask the mentor a question (exercises Groq + RAG)
 
 ---
 

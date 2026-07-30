@@ -35,8 +35,8 @@ from typing import Any
 from dotenv import load_dotenv
 
 # Standalone script (python -m services.roadmap_ingest) — unlike main.py, nothing
-# else loads backend/.env here, so ANTHROPIC_API_KEY / CLAUDE_MODEL wouldn't be
-# visible. Load it explicitly at import time.
+# else loads backend/.env here, so GROQ_API_KEY wouldn't be visible. Load it
+# explicitly at import time.
 load_dotenv()
 
 from sqlalchemy import select  # noqa: E402

@@ -2,8 +2,8 @@
 
 DECISION (2026-07-26): the explainer runs on Groq `llama-3.3-70b-versatile`
 (services/groq.py) — the key with usable quota — superseding the 2026-07-25
-Gemini decision. The Claude client stays untouched for the mentor feature;
-swapping the explainer to any provider remains a one-import change here.
+Gemini decision. Swapping the explainer to any provider remains a one-import
+change here.
 
 Context-scoped by design (project rule): every prompt carries the concrete
 graph + simulation result — never open-ended chat. The graph is serialized to
@@ -13,7 +13,8 @@ the prompt) so the answer is parseable structured JSON the frontend renders
 directly: summary, per-bottleneck WHY + fix, suggested fixes.
 
 No GROQ_API_KEY -> AIUnavailable -> the route's 503 -> the frontend's
-friendly "not configured" note. Same graceful-degradation contract as Claude.
+friendly "not configured" note. Same graceful-degradation contract every
+other AI feature in this app uses.
 """
 from __future__ import annotations
 

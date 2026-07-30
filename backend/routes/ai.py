@@ -5,7 +5,8 @@ text, roadmap-lesson text, or platform passages) in the prompt. 503 when no
 provider is configured. Providers (see CLAUDE.md Decisions): /ai/explain runs
 on Groq (services/ai_explain.py). /ai/mentor and /ai/chat share the
 RAG-grounded core in services/mentor.py: retrieval over the platform corpus +
-a Claude→Groq generation chain, with citations filtered to what the answer
+Groq generation (GROQ_MENTOR_MODEL, GROQ_MODEL fallback — Anthropic dropped
+entirely, DECISION 2026-07-30), with citations filtered to what the answer
 actually used (DECISION 2026-07-29, docs/RAG.md).
 
 /ai/mentor is public (no auth) — it backs two per-document widgets: the

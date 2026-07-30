@@ -37,13 +37,17 @@ lesson was learned the hard way, more than once.
   and the SQLite fallback in `db/session.py` both still exist as offline
   options, but Neon is what's actually used day to day. (Auth itself was
   swapped from Supabase — see "Auth swap" note under Decisions.)
-- AI: split by feature — the **simulation explainer** and roadmap ingest run
-  on **Groq** (isolated provider `services/groq.py`; explainer =
-  `GROQ_MODEL`, default `llama-3.3-70b-versatile`; ingest =
-  `GROQ_INGEST_MODEL`, default `qwen/qwen3.6-27b`); the **case-study mentor**
-  stays on Claude API — model `claude-sonnet-4-20250514` (see NOTE under
-  Decisions). `services/gemini.py` is kept for swap-back but unused by
-  default. See "Explainer + ingest on Groq" under Decisions, and
+- AI: **Google + Groq only — no Anthropic** (DECISION 2026-07-30, supersedes
+  every earlier "mentor stays on Claude" note below). All generation runs on
+  **Groq** (isolated provider `services/groq.py`, one model id per task):
+  explainer = `GROQ_MODEL` (default `llama-3.3-70b-versatile`), roadmap
+  ingest = `GROQ_INGEST_MODEL` (default `qwen/qwen3.6-27b`), mentor/chat =
+  `GROQ_MENTOR_MODEL` (defaults to `GROQ_MODEL`, tune independently once
+  needed). Embeddings (RAG retrieval only, not generation) run on **Gemini**
+  `gemini-embedding-001` (`services/embeddings.py`) — Groq has no embeddings
+  endpoint. `services/gemini.py`'s generation path is kept for swap-back but
+  unused by default. `services/claude.py` deleted — no importers left. See
+  "Explainer + ingest on Groq" and "Anthropic dropped" under Decisions, and
   `docs/AI_INTEGRATION.md` for the full architecture.
 - Content rendering: `react-markdown` + `remark-gfm` + `rehype-highlight`
   (roadmap lessons), `mermaid` (flowcharts). Long-form only; UI stays on Prose.
@@ -168,6 +172,21 @@ lesson was learned the hard way, more than once.
   the "Try it in the sandbox" boilerplate every lesson ends with was being
   chunked/cited despite carrying no explanatory content — excluded at chunk
   time. Full write-up: `docs/RAG.md` §3.5, §4.
+- **Anthropic dropped entirely — Groq covers every generation task, Gemini
+  stays embeddings-only.** DECISION (2026-07-30, Satyam's call): no task uses
+  Claude anymore. Supersedes every earlier "mentor stays on Claude" /
+  "Claude→Groq chain" note above — the mentor/chat core (`services/mentor.py`
+  `_generate`) is now Groq-only, with a two-attempt shape (`GROQ_MENTOR_MODEL`
+  then `GROQ_MODEL`) preserving the old chain's graceful-degradation spirit
+  within one provider instead of across two. `services/claude.py` deleted
+  (no importers left); `CLAUDE_MODEL`/`ANTHROPIC_API_KEY` removed from
+  `.env.example`, the Cloud Run deploy workflow, and Secret Manager
+  (`docs/DEPLOYMENT.md`). WHY: Anthropic key was a placeholder that never
+  went live in prod; simpler to run one paid-quota provider (Groq) for all
+  generation than maintain a fallback chain to a provider never actually
+  used. Tradeoff accepted: no longer a genuinely different model/vendor to
+  fall back to if Groq itself has an outage — only a different model on the
+  same provider.
 - **Diagrams are our own assets, never the source's.** Flowcharts render via
   **Mermaid** (```mermaid blocks → themed SVG, `components/ui/Mermaid.jsx`);
   static figures are hand-authored SVGs in `backend/static/roadmap/diagrams/`
@@ -231,9 +250,10 @@ lesson was learned the hard way, more than once.
 - **Canvas is optimistic.** UI updates instantly; the simulation result arrives
   async and reconciles.
 
-NOTE: spec pins the AI model to `claude-sonnet-4-20250514`. A newer Sonnet
-(`claude-sonnet-4-6`) is available as of 2026 — keep the model id in ONE place
-(`backend/services/claude.py` / an env var) so it's a one-line change later.
+NOTE: spec originally pinned the AI model to `claude-sonnet-4-20250514` — moot
+as of the 2026-07-30 "Anthropic dropped" decision above. All AI generation
+now runs on Groq, model ids in ONE place (`backend/services/groq.py`, env
+vars `GROQ_MODEL` / `GROQ_INGEST_MODEL` / `GROQ_MENTOR_MODEL`).
 
 ---
 
@@ -261,8 +281,8 @@ Prompt shape that works best in this repo:
 2 Wireframes ✅ · 3 Repo + CLAUDE.md ✅ · 4 Frontend canvas ✅ ·
 5 Simulation engine ✅ · 6 Wire FE↔BE ✅ · 7 Case studies (curated JSON; scraper
 ingest still stubbed) ✅ · 8 Challenges + scoring ✅ · 9 Auth + save + dashboard ✅ ·
-10 AI features ✅ (explainer + roadmap ingest live on Groq; mentor still
-needs a real ANTHROPIC_API_KEY) · **11 Polish + deploy (current)**
+10 AI features ✅ (explainer, roadmap ingest, and mentor/chat all live on
+Groq — Anthropic dropped 2026-07-30) · **11 Polish + deploy (current)**
 
 Big build 2026-07-07: sandbox canvas, challenge workspace + scoring, case-study
 reader + "Simulate This", learn layer (`frontend/src/data/concepts.js`), auth

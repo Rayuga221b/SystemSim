@@ -226,10 +226,10 @@ def test_mentor_degrades_gracefully_when_retrieval_fails(client, monkeypatch):
     def broken_retrieve(db, q, **kw):
         raise RuntimeError("embeddings provider down")
     monkeypatch.setattr(mentor_svc, "retrieve", broken_retrieve)
-    monkeypatch.setattr(mentor_svc, "_generate", lambda s, u: ("Plain answer.", "claude"))
+    monkeypatch.setattr(mentor_svc, "_generate", lambda s, u: ("Plain answer.", "groq"))
 
     slug = client.get("/casestudies").json()["case_studies"][0]["slug"]
     r = client.post("/ai/mentor", json={"case_study_slug": slug, "question": "Why?"})
     assert r.status_code == 200
     assert r.json() == {"answer": "Plain answer.", "grounded": False,
-                        "provider": "claude", "sources": []}
+                        "provider": "groq", "sources": []}

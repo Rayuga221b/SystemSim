@@ -1,15 +1,21 @@
-"""Groq provider — simulation explainer + roadmap ingest pipeline.
+"""Groq provider — simulation explainer, roadmap ingest, and mentor/chat
+generation.
 
-WHY separate from services/claude.py and services/gemini.py: providers stay
-isolated so a swap touches nothing else. DECISION (2026-07-26): both Gemini
-features moved here — the explainer runs on `llama-3.3-70b-versatile`, the
-roadmap ingest on `qwen/qwen3.6-27b` — because the Groq key is the one with
-usable quota. The case-study mentor remains on Claude. Logged in CLAUDE.md /
-BACKEND_LOG.md.
+WHY separate from services/gemini.py: providers stay isolated so a swap
+touches nothing else. DECISION (2026-07-26): both Gemini features moved
+here — the explainer runs on `llama-3.3-70b-versatile`, the roadmap ingest
+on `qwen/qwen3.6-27b` — because the Groq key is the one with usable quota.
+DECISION (2026-07-30, Satyam's call): Anthropic dropped entirely — no task
+uses Claude anymore. The mentor/chat generation core (`services/mentor.py`,
+previously Claude-preferred/Groq-fallback) now runs on Groq too, via its own
+`GROQ_MENTOR_MODEL` so it can be tuned independently of the explainer's
+model without touching that feature. `services/claude.py` deleted (no
+importers left). Logged in CLAUDE.md / BACKEND_LOG.md.
 
 OpenAI-compatible REST via urllib (no new SDK dependency). Model ids live in
-ONE place: GROQ_MODEL / GROQ_INGEST_MODEL env vars (defaults below). Set
-GROQ_API_KEY in backend/.env.
+ONE place: GROQ_MODEL / GROQ_INGEST_MODEL / GROQ_MENTOR_MODEL env vars
+(defaults below — GROQ_MENTOR_MODEL defaults to GROQ_MODEL until deliberately
+tuned to something else). Set GROQ_API_KEY in backend/.env.
 
 JSON handling: Groq's schema-enforced structured outputs only cover the
 GPT-OSS models, so for these models we use JSON *object* mode
@@ -29,6 +35,12 @@ import urllib.request
 
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 GROQ_INGEST_MODEL = os.getenv("GROQ_INGEST_MODEL", "qwen/qwen3.6-27b")
+# Mentor/chat generation (services/mentor.py). Defaults to GROQ_MODEL so it
+# works out of the box; set GROQ_MENTOR_MODEL to a distinct model id once
+# you've checked what's available on your key (`services.groq.list_models()`)
+# — long-form grounded answers with citations benefit from a larger model
+# than the explainer's short structured-JSON output needs.
+GROQ_MENTOR_MODEL = os.getenv("GROQ_MENTOR_MODEL", GROQ_MODEL)
 API_ROOT = "https://api.groq.com/openai/v1"
 
 

@@ -1,10 +1,9 @@
 """Shared fixtures. Tests run against a throwaway SQLite file and never
-require Postgres, Docker, or an Anthropic key."""
+require Postgres or Docker."""
 import os
 import pathlib
 
 os.environ["DATABASE_URL"] = "sqlite:///./test_systemsim.db"
-os.environ.pop("ANTHROPIC_API_KEY", None)  # AI endpoints must 503 in tests
 
 import pytest
 from fastapi.testclient import TestClient

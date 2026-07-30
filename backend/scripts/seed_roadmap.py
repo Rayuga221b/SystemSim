@@ -1,7 +1,7 @@
 """Seed the Foundations module with original, hand-authored lessons.
 
 WHY this exists alongside services/roadmap_ingest.py: the ingest pipeline needs
-ANTHROPIC_API_KEY to transform source material into original lessons. This seed
+GROQ_API_KEY to transform source material into original lessons. This seed
 lets the roadmap run end-to-end with real, published content with no key — the
 Foundations lessons here are written from scratch (industry-standard concepts in
 SystemSim's own voice), so they double as the reference quality bar for what the

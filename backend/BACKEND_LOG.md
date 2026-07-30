@@ -878,3 +878,63 @@ up elsewhere (the Alembic stamp/upgrade race, SQLite's tzinfo drop).
       Regenerate with `python -m services.roadmap_ingest --days 41-53
       --publish` once qwen/Gemini have headroom (upsert is idempotent by
       `day`, so this is a plain overwrite, no cleanup needed first).
+
+## 2026-07-30 — Anthropic dropped entirely; Cloud Run + Cloudflare Pages deploy setup
+
+Two things this session, both driven by "actually deploying now."
+
+### 1. Anthropic dropped — Groq covers every generation task
+
+Satyam's call: the Anthropic key was never real in prod (placeholder,
+503'd), and rather than keep provisioning/maintaining a fallback chain to a
+provider never actually used live, all AI generation now runs on Groq.
+Gemini stays embeddings-only (`services/embeddings.py` — Groq has no
+embeddings endpoint).
+
+`services/mentor.py`'s `_generate` — previously a Claude-preferred,
+Groq-fallback chain (2026-07-28 decision, itself already a defensive
+measure against the placeholder key) — is now Groq-only, with a new
+`GROQ_MENTOR_MODEL` env var (`services/groq.py`, defaults to `GROQ_MODEL`
+so it works unconfigured) tried first, `GROQ_MODEL` as the fallback. Kept
+the two-attempt shape deliberately: the old chain's value wasn't really
+"Claude vs Groq," it was "one bad/rate-limited generation call shouldn't
+503 the whole assistant" — that property is worth keeping even with a
+single provider, just expressed as two model attempts instead of two
+vendors.
+
+`services/claude.py` deleted outright (no importers left after the
+`mentor.py` change — confirmed via a repo-wide grep before deleting, not
+just diffing this one file). `ANTHROPIC_API_KEY`/`CLAUDE_MODEL` removed
+from `.env.example`, the Cloud Run deploy workflow's Secret Manager list,
+and `docs/DEPLOYMENT.md`'s provisioning steps. Test suite updated
+(`conftest.py`, `test_api.py`, `test_chat.py`, `test_rag.py` — mocked
+`"claude"` provider strings and the module-level `ANTHROPIC_API_KEY` pop
+were the only touch points); all 70 tests still pass.
+
+**Tradeoff accepted, stated plainly:** the old chain's real resilience
+property — a different vendor to fall back to if one has an outage — is
+gone. A Groq-wide outage now 503s `/ai/mentor` and `/ai/chat` outright
+where it previously would have fallen through to Claude. Acceptable here
+because Claude was never the one actually serving traffic anyway; worth
+revisiting only if Groq's reliability in practice turns out worse than
+expected.
+
+### 2. Cloud Run (backend) + Cloudflare Pages (frontend) deploy, walked live
+
+Full checklist in `docs/DEPLOYMENT.md`, GCP project `systemsim-504004`
+created and provisioned this session (Artifact Registry, `systemsim-deployer`
+service account + IAM, Secret Manager secrets + runtime SA grant). One
+incident worth recording for future sessions: a service-account JSON key
+was pasted into a chat transcript mid-setup — treated as compromised on
+sight, revoked (`gcloud iam service-accounts keys delete`), and reissued
+with instructions to paste the replacement directly into GitHub's secret
+UI rather than back through chat. No downstream exposure (caught before
+the key was ever used), but worth the reminder: a credential that touches
+a chat transcript is compromised the moment it's pasted, regardless of
+whether anything reads the transcript afterward — rotate, don't just
+"be more careful next time."
+
+`frontend/vercel.json` (added earlier this session for an initial
+Vercel-targeted plan) replaced with `frontend/public/_redirects` once
+Satyam confirmed Cloudflare Pages, not Vercel — same SPA-fallback need
+(the app uses `createBrowserRouter`), different host's mechanism.

@@ -18,11 +18,13 @@ entirely empty) — check it before assuming new, unrelated behavior.
     required), GET `/ai/chat/history` (auth required)
   - `admin.py` → POST `/admin/ingest`
 - `engine/simulation.py` — the SimulationEngine. **Satyam writes this by hand.**
-- `services/` — Claude API client, `auth.py` (bcrypt + JWT), scoring, ingestion.
-  RAG: `rag.py` (chunk+retrieve), `embeddings.py` (Gemini), `rag_index.py`
-  (build CLI), `mentor.py` (shared grounded-generation core: case_study /
-  sandbox / general context modes), `chat.py` (`/ai/chat`-only: persistence +
-  DB-backed rate limit on top of `mentor.py`) — see `docs/RAG.md`.
+- `services/` — `groq.py` (Groq API client: explain/ingest/mentor models),
+  `auth.py` (bcrypt + JWT), scoring, ingestion. RAG: `rag.py`
+  (chunk+retrieve), `embeddings.py` (Gemini), `rag_index.py` (build CLI),
+  `mentor.py` (shared grounded-generation core: case_study / sandbox /
+  general context modes), `chat.py` (`/ai/chat`-only: persistence +
+  DB-backed rate limit on top of `mentor.py`) — see `docs/RAG.md`. No
+  Anthropic dependency (dropped 2026-07-30 — all generation is Groq now).
 - `db/` — SQLAlchemy `base.py` + `session.py` (engine, `get_db`). `DATABASE_URL`
   is a hosted Neon Postgres branch (dev branch for local work) — see `.env`;
   the SQLite fallback in `session.py` only kicks in when `DATABASE_URL` is
@@ -40,7 +42,8 @@ entirely empty) — check it before assuming new, unrelated behavior.
   `process(load_rps) -> (output_rps, status)`. Same interface for all.
 - Simulation is stateless — no globals, no session. Graph in, result out.
 - Pydantic models for every request/response; mirror `docs/spec.md` schema.
-- Claude API model id lives in ONE place (`services/claude.py`, from env).
+- Groq model ids live in ONE place (`services/groq.py`, from env:
+  `GROQ_MODEL` / `GROQ_INGEST_MODEL` / `GROQ_MENTOR_MODEL`).
 - AI prompts are always context-scoped (graph or case study in the prompt).
 - Use NetworkX for the graph; BFS traversal from the Client node.
 - Keep routes ≤ ~30 lines; push logic down.

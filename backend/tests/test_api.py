@@ -157,10 +157,11 @@ def test_case_studies_list_and_detail(client):
 
 
 # --------------------------------------------------------------------- ai
-# The explainer runs on Groq (services/ai_explain.py), the mentor on Claude.
-# Tests never touch either provider: keys are stripped via monkeypatch (503
-# path) and the Groq call is mocked (success path) — robust regardless of
-# what .env contains.
+# The explainer and the mentor both run on Groq (services/ai_explain.py,
+# services/mentor.py) — Anthropic dropped entirely, DECISION 2026-07-30.
+# Tests never touch the real provider: the key is stripped via monkeypatch
+# (503 path) and the Groq call is mocked (success path) — robust regardless
+# of what .env contains.
 
 def test_ai_explain_returns_503_without_groq_key(client, monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
@@ -169,10 +170,9 @@ def test_ai_explain_returns_503_without_groq_key(client, monkeypatch):
 
 
 def test_ai_mentor_returns_503_without_any_provider(client, monkeypatch):
-    # The mentor chains Claude → Groq (services/mentor.py); only both keys
-    # missing yields 503. Retrieval short-circuits on the empty test index
+    # Groq is the only generation provider now (services/mentor.py); missing
+    # the key yields 503. Retrieval short-circuits on the empty test index
     # before ever calling the embeddings API, so no key stripping needed there.
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     slug = client.get("/casestudies").json()["case_studies"][0]["slug"]
     r = client.post("/ai/mentor", json={"case_study_slug": slug, "question": "Why?"})
