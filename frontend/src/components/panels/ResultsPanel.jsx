@@ -1,6 +1,6 @@
 // Simulation results: verdict, bottlenecks, tradeoff profile, warnings, and
 // the AI "explain my design" hook. Readable at a glance — no decoding needed.
-import { Sparkles, Loader2, AlertTriangle, CheckCircle2, AlertOctagon, XCircle } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, CheckCircle2, AlertOctagon, XCircle, Save, MessageCircle } from "lucide-react";
 import { useStore } from "@/store";
 import { fmt } from "@/lib/components";
 
@@ -25,6 +25,8 @@ export default function ResultsPanel() {
   const explainSimulation = useStore((s) => s.explainSimulation);
   const explainLoading = useStore((s) => s.explainLoading);
   const explanation = useStore((s) => s.explanation);
+  const setSaveModalOpen = useStore((s) => s.setSaveModalOpen);
+  const setChatOpen = useStore((s) => s.setChatOpen);
 
   if (!result) return null;
 
@@ -136,9 +138,12 @@ export default function ResultsPanel() {
 
       </div>
 
-      {/* AI explain — fixed footer so it's reachable however long the results
-          get; opens the walkthrough drawer (loading/error handled there). */}
-      <div className="shrink-0 px-4 py-3 border-t border-hairline/[0.06] bg-surface/95">
+      {/* Actions — fixed footer so they're reachable however long the results
+          get. Explain opens the walkthrough drawer (loading/error handled
+          there); Ask AI opens the floating assistant scoped to this sandbox
+          (FloatingChat reads context off the route + store, same as the
+          bottom-center bubble); Save opens SaveDesignModal. */}
+      <div className="shrink-0 px-4 py-3 border-t border-hairline/[0.06] bg-surface/95 flex flex-col gap-2">
         <button
           type="button"
           onClick={explainSimulation}
@@ -150,6 +155,24 @@ export default function ResultsPanel() {
           {explainLoading ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Sparkles size={14} aria-hidden />}
           {explainLoading ? "Thinking…" : explanation ? "View AI walkthrough" : "Explain my design"}
         </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setChatOpen(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 border border-hairline/[0.09] bg-elevated
+                       hover:bg-hairline/[0.06] text-ink/85 text-[12px] font-medium rounded-lg px-3 py-2 transition-colors"
+          >
+            <MessageCircle size={13} aria-hidden /> Ask AI
+          </button>
+          <button
+            type="button"
+            onClick={() => setSaveModalOpen(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 border border-hairline/[0.09] bg-elevated
+                       hover:bg-hairline/[0.06] text-ink/85 text-[12px] font-medium rounded-lg px-3 py-2 transition-colors"
+          >
+            <Save size={13} aria-hidden /> Save design
+          </button>
+        </div>
       </div>
     </div>
   );

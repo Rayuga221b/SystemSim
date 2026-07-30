@@ -57,7 +57,8 @@ export default function FloatingChat() {
   const authReady = useStore((s) => s.authReady);
   const ctx = useContext_();
 
-  const [open, setOpen] = useState(false);
+  const open = useStore((s) => s.chatOpen);
+  const setOpen = useStore((s) => s.setChatOpen);
   const [maximized, setMaximized] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -232,8 +233,16 @@ export default function FloatingChat() {
     </div>
   );
 
+  // Bottom-center only on /sandbox, where the default bottom-right spot
+  // overlaps the results sidebar that pops up after simulating; everywhere
+  // else stays bottom-right, just lifted a bit off the edge.
+  const isSandbox = ctx.type === "sandbox";
+
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3">
+    <div className={isSandbox
+      ? "fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3"
+      : "fixed bottom-8 right-5 z-40 flex flex-col items-end gap-3"}
+    >
       {open && maximized && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
