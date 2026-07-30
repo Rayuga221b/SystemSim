@@ -28,10 +28,13 @@ class AIUnavailable(Exception):
 
 
 def _key() -> str:
+    # .strip(): guards against a trailing newline in a secret-manager-sourced
+    # value — see services/groq.py's _key() for the incident this pattern
+    # is copied from (a bare 500 in production from an unstripped key).
     k = os.getenv("GEMINI_API_KEY")
-    if not k:
+    if not k or not k.strip():
         raise AIUnavailable("Set GEMINI_API_KEY (backend/.env) to use Gemini.")
-    return k
+    return k.strip()
 
 
 def _post(url: str, payload: dict, *, retries: int = 4) -> dict:

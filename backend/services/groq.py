@@ -49,10 +49,16 @@ class AIUnavailable(Exception):
 
 
 def _key() -> str:
+    # .strip(): a key sourced from a secret manager / echo'd into a file can
+    # carry a trailing newline invisibly — urllib rejects a header value
+    # containing one outright (ValueError: Invalid header value), which
+    # surfaced as a bare 500 in production rather than the intended
+    # AIUnavailable. Stripping here means a whitespace-contaminated secret
+    # degrades like any other bad key, not like an unhandled crash.
     k = os.getenv("GROQ_API_KEY")
-    if not k:
+    if not k or not k.strip():
         raise AIUnavailable("Set GROQ_API_KEY (backend/.env) to use Groq.")
-    return k
+    return k.strip()
 
 
 def _post(payload: dict, *, retries: int = 5) -> dict:
