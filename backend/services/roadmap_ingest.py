@@ -14,6 +14,18 @@ restructured result is persisted. Run:
     python -m services.roadmap_ingest --days 1-7 --publish
     python -m services.roadmap_ingest --all           # dry transform, unpublished
 
+DECISION (2026-07-30): target `production`'s DATABASE_URL directly (not
+`dev`) — e.g. `DATABASE_URL="..." python -m services.roadmap_ingest --days
+9`. Full rationale: docs/DEPLOYMENT_STATUS.md / backend/CLAUDE.md "Roadmap
+ingestion". IMPORTANT: this function always calls the AI provider for every
+day passed, every invocation — there is no cheap "just flip published on
+what's already there." Running the same day twice (plain, then --publish)
+burns the AI call twice AND can produce a different result the second time
+(generation isn't deterministic). To review before going live: run once
+without --publish, inspect the draft with SQL, then publish for free with
+`UPDATE roadmap_lessons SET published = true WHERE day IN (...)` — never by
+re-running this script a second time for the same day.
+
 DECISION (2026-07-29, Satyam's call): generation is a three-tier provider
 CHAIN — Gemini -> Groq/qwen -> Groq/llama-3.3-70b — same pattern already
 used by the mentor (docs/RAG.md). Ordered by measured quality, not

@@ -49,25 +49,62 @@ Deploys automatically on every push to `main` that touches `backend/**`
   - `users` / `designs` / `challenge_attempts` / `ai_messages`: empty (correct — production should only ever hold real accounts, never dev test data)
 - **`dev`** branch = local development only (`backend/.env`). Has the full in-progress roadmap ingest (62/76 lessons as of this writing, more being ingested).
 
-### Content publishing workflow (decided this session, not yet fully adopted)
+### Content publishing workflow — CANONICAL, read this before running ingestion
 
-Going forward, **ingest directly into `production`**, not `dev` — avoids the
-manual `dev → production` copy step entirely:
+**Also mirrored in `backend/CLAUDE.md`** so it loads automatically in any
+session working in `backend/` (e.g. an `ingestion` branch), not just one
+that happens to read this file.
+
+Ingest directly into `production`, not `dev` — no more manual `dev →
+production` copy step. `DATABASE_URL` isn't in `backend/.env` for this;
+export it inline per command so there's no risk of accidentally leaving
+your shell pointed at production for unrelated work:
 
 ```bash
-DATABASE_URL="PRODUCTION_CONNECTION_STRING" python -m services.roadmap_ingest --days <N>
-# review, then:
-DATABASE_URL="PRODUCTION_CONNECTION_STRING" python -m services.roadmap_ingest --days <N> --publish
+DATABASE_URL="PRODUCTION_DIRECT_OR_POOLED_CONNECTION_STRING" \
+  python -m services.roadmap_ingest --days <N>
 ```
 
-New lessons land as drafts (`published=false`, invisible to the public API)
-until explicitly `--publish`ed — no staging database needed, the schema
-already has a draft/live flag (`RoadmapLesson.published`, filtered on by
-every public route in `services/roadmap.py`). The moment a row flips to
-published, it's live on the deployed backend immediately — no redeploy.
+That lands new lessons as **drafts** (`published=false`) — invisible to
+every public route (`services/roadmap.py` filters `WHERE published =
+true`), so nothing half-baked ever reaches a real user. No staging
+database needed; the schema already has the right primitive
+(`RoadmapLesson.published`).
 
-The one-time backlog copy (already-ingested `dev` content → `production`)
-used `psql \copy`, NOT `pg_dump` (see incident log — version mismatch).
+**IMPORTANT — `ingest_days()` always calls the AI provider, for every day,
+every time it runs.** There is no "just flip publish on what's already
+there" shortcut in the script itself — running `--days N` then `--days N
+--publish` as two separate invocations burns the Groq/Gemini call TWICE
+for the same content (and can produce a *different* result the second
+time, since generation isn't deterministic). So:
+
+- **To review before publishing** (recommended for new content): run
+  once without `--publish`, inspect the draft directly with SQL —
+  ```bash
+  psql "PRODUCTION_DIRECT_STRING" -c \
+    "SELECT day, slug, title, published FROM roadmap_lessons WHERE day = <N>;"
+  ```
+  — then, if it's good, **flip the flag directly in SQL** rather than
+  re-running ingestion (this is the only "cheap publish" path, and it's
+  instant — no redeploy, no AI call):
+  ```bash
+  psql "PRODUCTION_DIRECT_STRING" -c \
+    "UPDATE roadmap_lessons SET published = true WHERE day IN (<N>, <N2>, ...);"
+  ```
+  If it's not good, re-run `--days N` (without `--publish`) to regenerate
+  — this IS a legitimate second AI call, since you're intentionally asking
+  for a redo.
+- **To skip review** (fine for content you already trust, e.g. re-running
+  a day that previously scored well in `dev`): just pass `--publish` on
+  the single ingestion call and skip the SQL step entirely.
+
+The one-time backlog copy (already-ingested `dev` content → `production`,
+62 lessons) used `psql \copy`, NOT `pg_dump` — Cloud Shell's client is
+Postgres 16, Neon's server is Postgres 18, and `pg_dump` refuses to dump
+from a newer major version by design (see incident log below). Both
+`\copy` and the `psql` commands above need the DIRECT (unpooled,
+no `-pooler` in the hostname) connection string, not the one the app itself
+uses.
 
 ---
 

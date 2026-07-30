@@ -58,3 +58,38 @@ entirely empty) — check it before assuming new, unrelated behavior.
   otherwise tables get created without `alembic_version` being stamped, and
   every later migration fails on "table already exists." See
   `docs/INCIDENTS.md` #6.
+
+## Roadmap ingestion (DECISION 2026-07-30 — read before running `roadmap_ingest`)
+
+Ingest **directly against `production`'s `DATABASE_URL`**, not `dev`. Full
+rationale + incident history: `docs/DEPLOYMENT_STATUS.md` §"Content
+publishing workflow" (that file is the canonical, up-to-date version of
+this section — check it first, this is a summary):
+
+```bash
+DATABASE_URL="PRODUCTION_CONNECTION_STRING" python -m services.roadmap_ingest --days <N>
+```
+
+(the inline `DATABASE_URL=` on the command line takes precedence over
+whatever `load_dotenv()` sets from `.env`, since `python-dotenv` never
+overrides an already-set env var — safe to use this pattern without
+touching `.env` at all)
+
+- New lessons land as **drafts** (`published=false`) — invisible to every
+  public route (`services/roadmap.py` filters `WHERE published = true`).
+- **`ingest_days()` always calls the AI provider, every time, for every
+  day passed — there is no cheap "just publish what's already there"
+  built into `--publish`.** Running the same day twice (once plain, once
+  with `--publish`) burns the Groq/Gemini call twice, and can produce a
+  *different* result the second time (generation isn't deterministic).
+- To review before publishing: run once WITHOUT `--publish`, inspect via
+  `psql "PRODUCTION_DIRECT_STRING" -c "SELECT day, slug, title, published
+  FROM roadmap_lessons WHERE day = <N>;"`, then publish for free with SQL —
+  `UPDATE roadmap_lessons SET published = true WHERE day IN (...);` — never
+  by re-running ingestion.
+- To skip review (content you already trust): pass `--publish` on the one
+  and only ingestion call.
+- Any bulk SQL against Neon (the `psql` calls above, or `pg_dump`) needs
+  the DIRECT (unpooled, no `-pooler` in hostname) connection string — the
+  app's own pooled string works for normal queries but not always for
+  admin-style operations.
