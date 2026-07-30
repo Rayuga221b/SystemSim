@@ -85,7 +85,13 @@ def build(force: bool = False) -> None:
 
         if to_embed:
             vectors = embed_documents([c.embed_text for c in to_embed])
-            for c, vec in zip(to_embed, vectors):
+            # Commit in small batches, not one insert for the whole corpus —
+            # a single-transaction bulk insert of ~400 embedding rows was
+            # observed dropping the Neon SSL connection mid-flush (large
+            # statement, pooled/serverless backend). Batching keeps each
+            # transaction small and makes a mid-run failure resumable: rows
+            # already committed show up as "unchanged" on the next `build`.
+            for i, (c, vec) in enumerate(zip(to_embed, vectors), start=1):
                 row = stored.get((c.source_slug, c.chunk_index))
                 if row is None:
                     row = RagChunk(source_slug=c.source_slug, chunk_index=c.chunk_index)
@@ -98,11 +104,14 @@ def build(force: bool = False) -> None:
                 row.content_hash = c.content_hash
                 row.embedding = vec
                 row.embedding_model = EMBEDDING_MODEL
+                if i % 25 == 0 or i == len(to_embed):
+                    db.commit()
+                    print(f"  committed {i}/{len(to_embed)}", flush=True)
 
         for r in stale:
             db.delete(r)
-
         db.commit()
+
         print(f"done: index at {len(want)} chunks (model {EMBEDDING_MODEL})")
     finally:
         db.close()

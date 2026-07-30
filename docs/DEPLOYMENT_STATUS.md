@@ -4,7 +4,9 @@
 `docs/DEPLOYMENT.md` (the how-to checklist, written once) and
 `backend/BACKEND_LOG.md` (append-only history), this file is a **living
 snapshot** — overwrite sections as state changes, don't append. Last updated:
-2026-07-30.
+2026-07-30 (roadmap ingestion finished, RAG index built for the first time —
+see `backend/BACKEND_LOG.md` same date for the narrative, `docs/PIPELINES.md`
+for the reusable step-by-step).
 
 ---
 
@@ -44,10 +46,10 @@ Deploys automatically on every push to `main` that touches `backend/**`
 ### Database — Neon, two branches
 
 - **`production`** branch = what the deployed backend actually uses (`DATABASE_URL` above). Schema migrated via Alembic (not `create_all` — see `docs/INCIDENTS.md` #6 for why that matters). Currently has:
-  - `roadmap_lessons`: **62 published rows** (synced from `dev` via `psql \copy` — see below)
-  - `rag_chunks`: **0 rows** — RAG index has never been built against either branch. Mentor/chat will answer via Groq but with no citations until this is built.
+  - `roadmap_lessons`: **76/76 published** (the last 14 — days 54-63, 67, 71, 72, 74 — ingested and published directly against `production` this session; see `backend/BACKEND_LOG.md` 2026-07-30 and `docs/PIPELINES.md`)
+  - `rag_chunks`: **492 rows** (471 roadmap + 21 case study, 83 source documents) — index built for the first time against `production` this session. Mentor/chat citations are now live.
   - `users` / `designs` / `challenge_attempts` / `ai_messages`: empty (correct — production should only ever hold real accounts, never dev test data)
-- **`dev`** branch = local development only (`backend/.env`). Has the full in-progress roadmap ingest (62/76 lessons as of this writing, more being ingested).
+- **`dev`** branch = local development only (`backend/.env`). Was at 62/76 as of this session's start; not re-synced (ingestion now targets `production` directly, so `dev` is expected to lag until it's separately re-ingested or copied).
 
 ### Content publishing workflow — CANONICAL, read this before running ingestion
 
@@ -132,12 +134,15 @@ Prep already done in the repo:
 
 1. **Deploy frontend to Cloudflare Pages** (above) — nothing else works
    end-to-end for a real user until this + the CORS update happen
-2. **Finish today's roadmap ingestion** (~14 lessons remaining as of this
-   writing) — ingest directly to `production` per the workflow above
-3. **Build the RAG index** once ingestion settles: `python -m
-   services.rag_index build` against `production` — without this, mentor/chat
-   citations stay empty (answers still work, just ungrounded)
-4. **Update `CORS_ORIGINS`** GitHub secret + redeploy, once frontend URL exists
+2. **Update `CORS_ORIGINS`** GitHub secret + redeploy, once frontend URL exists
+
+Done this session (were previously open items here):
+- ~~Finish roadmap ingestion~~ — 76/76 published in `production`.
+- ~~Build the RAG index~~ — 492 chunks in `production`'s `rag_chunks`,
+  mentor/chat citations now live. Two bugs found + fixed along the way
+  (bulk-insert SSL drop in `rag_index.py`, a pre-existing day-76 lesson
+  with escaped-not-real newlines that silently produced 0 chunks) — see
+  `backend/BACKEND_LOG.md` 2026-07-30 and `docs/PIPELINES.md`.
 
 ---
 
@@ -173,6 +178,9 @@ Prep already done in the repo:
 
 ## Related docs
 
+- `docs/PIPELINES.md` — step-by-step reference for re-running the roadmap
+  ingestion and RAG index build pipelines (exact commands, provider chain
+  behavior, bugs found running each against production)
 - `docs/DEPLOYMENT.md` — the how-to checklist (provisioning steps, written
   once, use for setting this up in a NEW GCP project)
 - `backend/BACKEND_LOG.md` — dated design/decision log (append-only,

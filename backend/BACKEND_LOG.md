@@ -985,3 +985,70 @@ still pending (frontend, `CORS_ORIGINS` placeholder, RAG index build), and
 the incidents above — written specifically so a new Claude Code session
 with no conversation memory can resume this work without re-deriving state
 from git history. `CLAUDE.md`'s hosting decision now points to it.
+
+## 2026-07-30 (cont. 2) — Roadmap ingestion finished (76/76 in production) + RAG index built for the first time
+
+Closed out the two open items from the status tracker above: the last 14
+roadmap days, and the RAG index that had never been built against Neon.
+Full step-by-step reference for re-running either pipeline is now
+`docs/PIPELINES.md`; this entry is the narrative of what actually happened
+running them live.
+
+**Ingestion (`services.roadmap_ingest --days 54,55,56,57,58,59,60,61,62,63,67,71,72,74`,
+target `production` directly per the decided workflow):** ran once without
+`--publish` (drafts), spot-checked all 14 titles/slugs/word-counts via SQL,
+then published in one `UPDATE ... WHERE day IN (...)` — no second AI call.
+Production is now **76/76 published**.
+
+The three-tier provider chain (`transform()`'s docstring) wasn't
+theoretical today — it fired on nearly every one of the 14 days: Gemini's
+free-tier quota was fully exhausted (`429` on every attempt), Groq/qwen
+periodically returned malformed JSON (`400 json_validate_failed` — a
+model-quality failure, not a quota one), and Groq/llama-3.3-70b caught
+every one of those as the last resort. One day (57) hit a plain
+`TimeoutError` on the read (transient network, not a provider error) and
+was cleanly retried alone with `--days 57` — the batch's per-day
+try/except meant the other 13 days were unaffected by that one failure.
+
+**RAG index (`services.rag_index build`), built against `production` for
+the first time:** two real bugs surfaced, both fixed in
+`backend/services/rag_index.py`:
+
+1. **Bulk-insert SSL drop.** The original `build()` computed embeddings for
+   all ~400 changed chunks, then issued a single `db.commit()` for the
+   whole batch. Neon's connection died mid-flush on that one large
+   multi-row `INSERT` (`psycopg2.OperationalError: SSL connection has been
+   closed unexpectedly`) — losing the entire batch of already-paid-for
+   Gemini embedding calls, since nothing had committed yet. Fixed by
+   committing every 25 rows inside the loop instead of once at the end:
+   smaller transactions survive whatever Neon didn't like about the big
+   one, and a future crash mid-batch only loses the uncommitted tail, not
+   everything (the existing content-hash diff in `build()` already treats
+   a committed row as "unchanged" on the next run — this fix makes that
+   resumability actually reachable in practice, not just in theory).
+2. **Day 76 silently produced zero chunks.** Investigating why the index
+   landed at 485 instead of the expected ~492, `chunk_markdown()` was
+   returning `[]` for day 76 specifically. Its stored `body_md` had **zero
+   real newline characters** — the whole lesson was one line with 121
+   literal `\n` escape sequences instead of line breaks, so the `##`
+   heading splitter had nothing to split on. This predates today's
+   session (day 76 was ingested earlier) and was invisible until RAG
+   chunking exposed it — the lesson still *looked* fine as an unrendered
+   DB string. Root cause not chased further (likely a JSON round-trip that
+   didn't get `json.loads`'d somewhere upstream in an earlier ingest run);
+   fixed pragmatically with a direct `body_md.replace('\n', '\n')`
+   (literal → real) against the stored row, verified it chunks correctly
+   (7 chunks), then re-ran the index build. Worth a `grep`-style sanity
+   check (real-newline count > 0) across the other 75 lessons at some
+   point, but none of them showed the symptom (0 chunks) so this was
+   scoped to the one row.
+
+**Final state:** `roadmap_lessons` 76/76 published, `rag_chunks` 492 rows
+(471 roadmap + 21 case study, 83 source documents) — matches the
+~499-chunk figure `docs/RAG.md` estimated before boilerplate exclusion was
+added. Mentor/chat citations are now live in production for the first
+time; before this, `docs/RAG.md`'s whole retrieval pipeline had been
+verified against `dev` and unit tests, but production had literally zero
+rows in `rag_chunks` and would silently degrade to ungrounded answers on
+every question (§3.6's failure contract working exactly as designed, just
+not yet exercised for real).
