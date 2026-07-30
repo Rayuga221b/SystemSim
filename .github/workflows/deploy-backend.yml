@@ -53,7 +53,12 @@ jobs:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.IMAGE }}
-          flags: --allow-unauthenticated --min-instances=0
+          # timeout=600: Groq's retry/backoff (services/groq.py) can block a
+          # single /ai/explain or /ai/mentor request for several minutes
+          # during a 429 storm — Cloud Run's 300s default can kill that
+          # request mid-retry with a 504. 600s gives it room without being
+          # unbounded (Cloud Run's own cap is 3600s).
+          flags: --allow-unauthenticated --min-instances=0 --timeout=600
           env_vars: |
             ENVIRONMENT=production
             CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
