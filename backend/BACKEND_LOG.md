@@ -938,3 +938,50 @@ whether anything reads the transcript afterward — rotate, don't just
 Vercel-targeted plan) replaced with `frontend/public/_redirects` once
 Satyam confirmed Cloudflare Pages, not Vercel — same SPA-fallback need
 (the app uses `createBrowserRouter`), different host's mechanism.
+
+## 2026-07-30 (cont.) — Backend deploy actually succeeded; live status tracker added
+
+Continuation of the same-day session above — the GCP setup got walked live
+through to a working deploy, not just provisioned.
+
+**Two real gaps hit provisioning the GCP side, beyond what the checklist
+anticipated:**
+
+1. `roles/artifactregistry.writer` didn't land on `systemsim-deployer`
+   despite being in the same `for role in ...; do gcloud projects
+   add-iam-policy-binding ...; done` loop as two roles that did land. Cause
+   unconfirmed (loop output wasn't checked per-iteration at the time) —
+   caused `docker push` to fail with `permission denied` on
+   `artifactregistry.repositories.uploadArtifacts`. Fixed by granting the
+   role again directly. Lesson for next time: verify all granted roles show
+   up in `gcloud projects get-iam-policy`, don't trust a loop ran clean from
+   its aggregate exit code alone.
+2. `pg_dump` (Cloud Shell's client, Postgres 16) refused to dump from Neon's
+   server (Postgres 18) — refuses by design on a newer major version.
+   Switched to `psql -c "\copy ... WITH CSV HEADER"` for the one-time
+   `dev` → `production` roadmap content backlog copy (62 lessons,
+   `rag_chunks` still empty on both — RAG index never built against Neon).
+   Both operations need the DIRECT (unpooled) connection string, not the
+   `-pooler` one the app uses.
+
+**Deploy confirmed live:** `https://systemsim-api-kicddhkfiq-uc.a.run.app`
+— `/health`, `/casestudies`, `/roadmap` (62 published lessons) all verified
+against the `production` Neon branch.
+
+**Content-publishing workflow decided:** rather than keep manually copying
+`dev` → `production` after every ingest batch, future ingestion should
+target `production`'s `DATABASE_URL` directly. The schema already has the
+right primitive for this — `RoadmapLesson.published` (bool, defaults false,
+every public route in `services/roadmap.py` filters on it) — so new lessons
+land as invisible drafts and go live the instant `--publish` runs, no
+staging database, no redeploy. This wasn't obvious until re-examining the
+schema mid-session; the original dev/production DB split was designed for
+app-code testing (not touching real user accounts), and got reflexively
+applied to content authorship too, where it doesn't actually fit.
+
+**New file: `docs/DEPLOYMENT_STATUS.md`** — a living (not append-only)
+snapshot of exactly what's deployed, every GCP resource name/role, what's
+still pending (frontend, `CORS_ORIGINS` placeholder, RAG index build), and
+the incidents above — written specifically so a new Claude Code session
+with no conversation memory can resume this work without re-deriving state
+from git history. `CLAUDE.md`'s hosting decision now points to it.

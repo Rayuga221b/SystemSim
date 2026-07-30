@@ -71,6 +71,17 @@ lesson was learned the hard way, more than once.
   Secret Manager, service account/IAM, GitHub Actions secrets, Cloudflare
   Pages env vars). DB is Neon (see above), hosted independently of where the
   backend runs.
+  - **STATUS (2026-07-30): backend is LIVE** —
+    `https://systemsim-api-kicddhkfiq-uc.a.run.app`, deployed and verified
+    (`/health`, `/casestudies`, `/roadmap` all responding correctly against
+    the `production` Neon branch). Frontend NOT yet deployed. **Read
+    `docs/DEPLOYMENT_STATUS.md` first in any new session touching
+    deployment** — it's a living snapshot of exactly what's done, what's
+    pending, and every gotcha hit setting this up (IAM role that silently
+    didn't apply, `pg_dump`/Postgres version mismatch, the `CORS_ORIGINS`
+    placeholder still needing the real frontend URL). This bullet is the
+    decision record (WHY Cloud Run + Cloudflare Pages); that file is the
+    up-to-the-minute state (WHAT's actually deployed right now).
   - (superseded) Fly.io note, 2026-07-29: `fly.toml` + `Dockerfile` already
     exist, `release_command = alembic upgrade head` wired for auto-migration
     on deploy. Supersedes the earlier "AWS" plan, which was never acted on.
