@@ -12,6 +12,15 @@ previously Claude-preferred/Groq-fallback) now runs on Groq too, via its own
 model without touching that feature. `services/claude.py` deleted (no
 importers left). Logged in CLAUDE.md / BACKEND_LOG.md.
 
+DECISION (2026-08-24): `GROQ_MODEL` default switched to `openai/gpt-oss-20b`
+— `llama-3.3-70b-versatile` started 404ing in prod (`model_not_found`);
+Groq's own rate-limit docs don't list it under free-tier models at all, so
+it's Enterprise-tier-gated and unreachable on this free key. `gpt-oss-20b`
+is confirmed free tier (30 RPM / 1K RPD / 8K TPM / 200K TPD) and gets the
+schema-enforced structured-output path (see JSON handling note below),
+which `llama-3.3-70b-versatile` didn't. Live incident + fix: see
+`docs/INCIDENTS.md`.
+
 OpenAI-compatible REST via urllib (no new SDK dependency). Model ids live in
 ONE place: GROQ_MODEL / GROQ_INGEST_MODEL / GROQ_MENTOR_MODEL env vars
 (defaults below — GROQ_MENTOR_MODEL defaults to GROQ_MODEL until deliberately
@@ -33,7 +42,7 @@ import time
 import urllib.error
 import urllib.request
 
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 GROQ_INGEST_MODEL = os.getenv("GROQ_INGEST_MODEL", "qwen/qwen3.6-27b")
 # Mentor/chat generation (services/mentor.py). Defaults to GROQ_MODEL so it
 # works out of the box; set GROQ_MENTOR_MODEL to a distinct model id once

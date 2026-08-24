@@ -19,6 +19,7 @@ confirmed if it wasn't.
 | 3 | A migration script silently wrote to the wrong DB | Fixed — recurred in 3 more scripts same day, all fixed together |
 | 4 | Neon free-tier child branches auto-delete after 24h by default | Fixed (disable expiry before treating a branch as permanent) |
 | 9 | A long AI-provider retry wait let the Neon connection go stale, crashing the whole ingest batch on `rollback()` | Fixed (`pool_pre_ping=True` + a hardened rollback handler) |
+| 10 | Live mentor/chat 503'd — `llama-3.3-70b-versatile` is Enterprise-tier, not on the free key | Fixed (switched default to `openai/gpt-oss-20b`) |
 | 5 | Multiple concurrent Claude Code sessions on this repo produce confusing symptoms | Not a bug — awareness only |
 | 6 | `alembic upgrade` on a DB that already has the schema fails; `stamp` is the fix | Fixed, see BACKEND_LOG 2026-07-28 |
 | 7 | SQLite silently drops tzinfo on read even from timezone-aware columns; Postgres doesn't | Fixed, see BACKEND_LOG 2026-07-29 |
@@ -248,3 +249,42 @@ obvious case in this project) is exposed to this. `pool_pre_ping` should be
 the default assumption for anything talking to hosted Postgres from a
 long-running process — don't wait to hit this a third time before adding
 it to a new script.
+
+## 10. Live mentor/chat 503'd — `llama-3.3-70b-versatile` is Enterprise-tier
+
+**What happened:** the floating AI assistant and per-lesson "Ask the
+mentor" both failed silently in prod (user report: "the chat ai assistant
+is working... in the live website its not"). Backend and CORS were both
+healthy; `curl`ing `POST /ai/mentor` directly against Cloud Run returned
+`503` with body `Groq HTTP 404: The model llama-3.3-70b-versatile does not
+exist or you do not have access to it.`
+
+**Root cause:** `GROQ_MODEL` (and `GROQ_MENTOR_MODEL`, which defaults to
+it) defaulted to `llama-3.3-70b-versatile` in `services/groq.py`. That
+model is listed on Groq's docs page but does NOT appear in Groq's own
+free-tier rate-limit table — it's Enterprise-tier-gated, and this
+project's key is a free-tier key. `mentor.py`'s two-attempt fallback
+(`GROQ_MENTOR_MODEL` then `GROQ_MODEL`) didn't help because both defaulted
+to the same inaccessible model, so both attempts failed identically.
+Neither Secret Manager nor the Cloud Run deploy workflow sets `GROQ_MODEL`
+as an env var — only `GROQ_API_KEY` is injected — so the code default was
+the only thing that needed to change to fix prod.
+
+**Status: fixed** (2026-08-24). Switched the default to
+`openai/gpt-oss-20b` — confirmed free tier (30 RPM / 1K RPD / 8K TPM / 200K
+TPD via Groq's rate-limit docs) and confirmed working with a live curl
+against `api.groq.com` using the project's actual key. Updated in three
+places: `services/groq.py` (`GROQ_MODEL` default), `backend/.env.example`,
+and the local `backend/.env`. `GROQ_INGEST_MODEL` (`qwen/qwen3.6-27b`) was
+untouched — it's a *Preview* model per Groq's docs ("may be discontinued
+at short notice"), which is a similar but separate risk worth watching,
+not something broken right now.
+
+**Lesson for future instances:** a model that a provider's docs page lists
+under "Production Models" isn't necessarily reachable by every API key —
+tier-gating (Enterprise vs free) is a separate axis from
+production-vs-preview, and only shows up as a plain `model_not_found` 404
+at request time, not anywhere in the docs prose. When an AI feature 503s
+in prod, `curl` the endpoint directly with the real error body before
+guessing — the Groq error message here named the exact problem in one
+line.
