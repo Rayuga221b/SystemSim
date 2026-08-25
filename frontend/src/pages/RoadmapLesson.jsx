@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { api } from "@/api/client";
 import Markdown from "@/components/ui/Markdown";
+import Prose from "@/components/ui/Prose";
 import SourceChips from "@/components/ui/SourceChips";
 
 const READ_KEY = "systemsim_roadmap_read";
@@ -345,7 +346,7 @@ export default function RoadmapLesson() {
                   {answer && (
                     <div className="mb-4 rounded-xl border border-hairline/[0.07] bg-surface p-5">
                       <p className="text-[12.5px] text-muted mb-3 italic">"{answer.q}"</p>
-                      <p className="font-read text-[0.9375rem] text-ink/85 leading-relaxed whitespace-pre-wrap">{answer.a}</p>
+                      <Prose text={answer.a} className="text-[0.9375rem]" />
                       <SourceChips sources={answer.sources} />
                     </div>
                   )}

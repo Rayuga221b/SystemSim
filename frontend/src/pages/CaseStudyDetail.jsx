@@ -270,7 +270,7 @@ export default function CaseStudyDetail() {
             {answer && (
               <div className="mb-4 rounded-xl border border-hairline/[0.07] bg-surface p-5">
                 <p className="text-[12.5px] text-muted mb-3 italic">"{answer.q}"</p>
-                <p className="font-read text-[0.9375rem] text-ink/85 leading-relaxed whitespace-pre-wrap">{answer.a}</p>
+                <Prose text={answer.a} className="text-[0.9375rem]" />
                 <SourceChips sources={answer.sources} />
               </div>
             )}

@@ -16,6 +16,7 @@ import { X, Send, Loader2, Sparkles, Maximize2, Minimize2 } from "lucide-react";
 import { api } from "@/api/client";
 import { useStore } from "@/store";
 import SourceChips from "@/components/ui/SourceChips";
+import Prose from "@/components/ui/Prose";
 
 function useContext_() {
   const location = useLocation();
@@ -39,13 +40,13 @@ function Message({ m }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[86%] rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
+        className={`max-w-[86%] rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
           isUser
-            ? "bg-indigo-500/90 text-white"
-            : "bg-surface border border-hairline/[0.08] text-ink/90"
+            ? "bg-indigo-500/90 text-white whitespace-pre-wrap"
+            : "bg-surface border border-hairline/[0.08] text-ink/90 [&_p]:text-[13px] [&_p]:leading-relaxed [&_p]:my-0 [&_p+p]:mt-2.5 [&_ul]:text-[13px] [&_ol]:text-[13px] [&_ul]:my-0 [&_ol]:my-0 [&_ul+p]:mt-2.5 [&_p+ul]:mt-2.5"
         }`}
       >
-        {m.content}
+        {isUser ? m.content : <Prose text={m.content} />}
         {!isUser && <SourceChips sources={m.sources} />}
       </div>
     </div>
