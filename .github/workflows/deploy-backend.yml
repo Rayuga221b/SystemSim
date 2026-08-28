@@ -13,7 +13,28 @@ env:
   REPO: systemsim
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      # Tests never touch Postgres/Docker/real AI APIs — conftest.py points
+      # DATABASE_URL at a throwaway SQLite file, and generation/embeddings
+      # are monkeypatched. No secrets needed here.
+      - name: Run pytest
+        working-directory: backend
+        run: python -m pytest
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
